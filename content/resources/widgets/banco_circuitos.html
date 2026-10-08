@@ -4,23 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Banco de circuitos</title>
-<!--
-  Banco de circuitos combinacionales sobre logica.js (fuente única: 04_RECURSOS_COMUNES/
-  interactivos/logica_digital/). Configuración, por orden de prioridad: name del iframe, #hash, ?query.
-    modo=ver|predecir|montar
-    escena=<id>                 (modos ver/predecir) circuito ya montado: ver ESCENAS más abajo
-    puertas=NOT,AND,OR,...      (modo montar) puertas que se pueden añadir
-    maxent=2|3|4                (modo montar) entradas máximas por puerta (por defecto 3)
-    entradas=A,B                (modo montar) entradas iniciales
-    salidas=S | S1,S2           (modo montar) salidas del circuito (por defecto S)
-    display=si                  (modo montar) salidas a…g conectadas a un display de 7 segmentos
-    maxpuertas=14               (modo montar) puertas máximas (4-40; 2º TECI necesita más)
-    objetivo=0001 | hex7seg     (modo montar) tabla objetivo de la primera salida (0, 1, ? sin dar,
-                                x da igual) o, con display, la del decodificador hexadecimal 0-F
-    id=<texto>                  clave del guardado automático en este navegador
-    m=<montaje>                 montaje guardado (lo escribe «Copiar enlace»)
-  Modelo ideal de dos estados: no simula tensiones, retrasos ni consumos.
--->
 <style>
 :root{--tinta:#1d2733;--suave:#4b5866;--panel:#f6f8fa;--linea:#c9d4de;--acento:#22425c;--acento-osc:#162c3e;
   --uno:#b34700;--uno-fondo:#fff1e6;--cero:#5f6b77;--ok:#1f6e43;--ok-fondo:#e8f5ee;--mal:#9b2c2c;--mal-fondo:#fbeaea;--foco:#0b62d6;--sel:#7a3fb0}
@@ -80,8 +63,7 @@ textarea{width:100%;font-family:"DejaVu Sans Mono",Menlo,monospace;font-size:.85
 <div class="panel" id="panel">
   <noscript><p><strong>El banco de circuitos necesita JavaScript.</strong> Sin él, resuelve el circuito en papel: tabla de verdad, expresión y esquema.</p></noscript>
 
-  <!-- ===== cabecera del modo ver / predecir ===== -->
-  <div id="cab-ver" class="oculto">
+    <div id="cab-ver" class="oculto">
     <h2 id="titulo-escena"></h2>
     <p id="enunciado-escena"></p>
     <dl class="leyenda" id="leyenda"></dl>
@@ -91,8 +73,7 @@ textarea{width:100%;font-family:"DejaVu Sans Mono",Menlo,monospace;font-size:.85
     </div>
   </div>
 
-  <!-- ===== barra del modo montar ===== -->
-  <div id="cab-montar" class="oculto">
+    <div id="cab-montar" class="oculto">
     <h2>Monta tu circuito</h2>
     <div class="fila" id="paleta" role="group" aria-label="Añadir puerta"></div>
     <div class="fila" style="margin-top:6px">
@@ -124,8 +105,7 @@ textarea{width:100%;font-family:"DejaVu Sans Mono",Menlo,monospace;font-size:.85
     <ol class="pasos" id="pasos"></ol>
   </div>
 
-  <!-- ===== conexiones (montar): alternativa completa sin ratón ===== -->
-  <div class="caja oculto" id="caja-conex">
+    <div class="caja oculto" id="caja-conex">
     <h3>Qué significa cada señal</h3>
     <ul class="lista-g" id="lista-entradas"></ul>
     <ul class="lista-g" id="lista-salidas"></ul>
@@ -145,8 +125,7 @@ textarea{width:100%;font-family:"DejaVu Sans Mono",Menlo,monospace;font-size:.85
     </div>
   </div>
 
-  <!-- ===== guardar / evidencias (montar) ===== -->
-  <div class="caja oculto" id="caja-guardar">
+    <div class="caja oculto" id="caja-guardar">
     <h3>Guardar y entregar</h3>
     <div class="fila">
       <button type="button" id="copiar-enlace">Copiar enlace del montaje</button>
@@ -160,28 +139,7 @@ textarea{width:100%;font-family:"DejaVu Sans Mono",Menlo,monospace;font-size:.85
   <p class="pie">Modelo ideal: solo dos estados, 0 y 1. Un circuito real tiene tensiones, retrasos y consumos que aquí no aparecen.</p>
 </div>
 <script>
-/* logica.js · sha256 7c671c4a7b1e (copia empaquetada: no editar aquí) */
-/*
- * logica.js — Base lógica común de los interactivos de electrónica digital
- * (4º ESO Tecnología y 2º Bachillerato Tecnología e Ingeniería · IES El Majuelo).
- *
- * Fuente única: 04_RECURSOS_COMUNES/interactivos/logica_digital/. Cada .elpx lleva una
- * copia empaquetada; no editar las copias, editar aquí y volver a empaquetar.
- * Pruebas: `node test_logica.js` (deben pasar todas antes de empaquetar).
- *
- * Modelo: lógica IDEAL de dos estados (0 y 1). No representa tensiones, tiempos de
- * propagación, rebotes ni ningún otro fenómeno eléctrico real.
- *
- * NOTACIÓN ÚNICA (decisión 2026-10-05):
- *   - Entradas en MAYÚSCULA (A, B, C… o inicial con significado: P, V, M1…).
- *   - Salida S (S1, S2… si hay varias).
- *   - Producto con punto explícito A·B; suma +; XOR ⊕; negación con barra encima.
- *   - Tablas: columnas A B C | S, filas 000→111, A = bit de mayor peso.
- * Para ESCRIBIR expresiones (teclado) se aceptan además: * . & (producto), | (suma),
- * ^ (XOR) y, para negar, ' detrás o ¬ ! ~ delante. Lo que se MUESTRA usa siempre
- * la notación única (aHTML / aLatex).
- * Precedencia: negación > producto (·) > XOR (⊕) > suma (+). Ante la duda, paréntesis.
- */
+/* sha256 a70c6307c974 */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
   else root.LogicaDigital = factory();

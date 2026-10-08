@@ -4,14 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tabla de verdad y equivalencia</title>
-<!--
-  Escena «tabla y equivalencia» sobre logica.js. Configuración (name del iframe > #hash > ?query):
-    modo=tabla        completar la columna S de una expresión: vars=C,P,V;expr=C·(P + V)
-    modo=equivalencia comparar dos expresiones: a=<original>;b=<otra> (si falta b, la construye el alumnado);
-                      vars=D,P,B fija el orden de las columnas (si no, orden alfabético)
-  Notación única: A·B, A + B, negación con barra, A ⊕ B. El alumnado NUNCA ve «¬»: la versión libre se
-  construye con botones y se dibuja siempre con la barra (repaso DOCA 2026-10-08, M2).
--->
 <style>
 :root{--tinta:#1d2733;--suave:#4b5866;--panel:#f6f8fa;--linea:#c9d4de;--acento:#22425c;--acento-osc:#162c3e;
   --uno:#b34700;--uno-fondo:#fff1e6;--cero:#5f6b77;--ok:#1f6e43;--ok-fondo:#e8f5ee;--mal:#9b2c2c;--mal-fondo:#fbeaea;--foco:#0b62d6}
@@ -58,8 +50,7 @@ tr.actual td{background:#fff4d6}
 <div class="panel" id="panel">
   <noscript><p><strong>Esta actividad necesita JavaScript.</strong> Resuélvela en papel: escribe la tabla completa y compárala fila a fila.</p></noscript>
 
-  <!-- ===== completar la tabla ===== -->
-  <div id="vista-tabla" class="oculto">
+    <div id="vista-tabla" class="oculto">
     <h2>Completa la columna S</h2>
     <p class="leyenda">Pulsa cada casilla de S para elegir su valor (· sin rellenar → 0 → 1). Cuando termines, pulsa «Comprobar».</p>
     <div id="tabla-t" style="overflow-x:auto"></div>
@@ -69,8 +60,7 @@ tr.actual td{background:#fff4d6}
     </div>
   </div>
 
-  <!-- ===== equivalencia ===== -->
-  <div id="vista-eq" class="oculto">
+    <div id="vista-eq" class="oculto">
     <div class="dos">
       <div class="caja">
         <h2>Circuito original</h2>
@@ -107,28 +97,7 @@ tr.actual td{background:#fff4d6}
   <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
 </div>
 <script>
-/* logica.js · sha256 7c671c4a7b1e (copia empaquetada: no editar aquí) */
-/*
- * logica.js — Base lógica común de los interactivos de electrónica digital
- * (4º ESO Tecnología y 2º Bachillerato Tecnología e Ingeniería · IES El Majuelo).
- *
- * Fuente única: 04_RECURSOS_COMUNES/interactivos/logica_digital/. Cada .elpx lleva una
- * copia empaquetada; no editar las copias, editar aquí y volver a empaquetar.
- * Pruebas: `node test_logica.js` (deben pasar todas antes de empaquetar).
- *
- * Modelo: lógica IDEAL de dos estados (0 y 1). No representa tensiones, tiempos de
- * propagación, rebotes ni ningún otro fenómeno eléctrico real.
- *
- * NOTACIÓN ÚNICA (decisión 2026-10-05):
- *   - Entradas en MAYÚSCULA (A, B, C… o inicial con significado: P, V, M1…).
- *   - Salida S (S1, S2… si hay varias).
- *   - Producto con punto explícito A·B; suma +; XOR ⊕; negación con barra encima.
- *   - Tablas: columnas A B C | S, filas 000→111, A = bit de mayor peso.
- * Para ESCRIBIR expresiones (teclado) se aceptan además: * . & (producto), | (suma),
- * ^ (XOR) y, para negar, ' detrás o ¬ ! ~ delante. Lo que se MUESTRA usa siempre
- * la notación única (aHTML / aLatex).
- * Precedencia: negación > producto (·) > XOR (⊕) > suma (+). Ante la duda, paréntesis.
- */
+/* sha256 a70c6307c974 */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
   else root.LogicaDigital = factory();

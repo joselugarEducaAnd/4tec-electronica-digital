@@ -4,12 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bits y valor posicional</title>
-<!--
-  Escena «conversor binario» sobre logica.js. Configuración (name del iframe > #hash > ?query):
-    bits=4|8           número de bits (por defecto 4)
-    hex=si             muestra el hexadecimal (solo ampliación en 4.º ESO)
-    modo=explorar|reto modo inicial
--->
 <style>
 :root{--tinta:#1d2733;--suave:#4b5866;--linea:#c9d4de;--panel:#f6f8fa;--acento:#22425c;--acento-osc:#162c3e;
   --uno:#b34700;--uno-fondo:#fff1e6;--cero:#5f6b77;--ok:#1f6e43;--ok-fondo:#e8f5ee;--mal:#9b2c2c;--mal-fondo:#fbeaea;--foco:#0b62d6}
@@ -67,28 +61,7 @@ button:focus-visible{outline:3px solid var(--foco);outline-offset:2px}
   <p class="pie">Cada bit vale 0 o 1. Su posición dice cuánto aporta: cada posición vale el doble que la de su derecha.</p>
 </div>
 <script>
-/* logica.js · sha256 7c671c4a7b1e (copia empaquetada: no editar aquí) */
-/*
- * logica.js — Base lógica común de los interactivos de electrónica digital
- * (4º ESO Tecnología y 2º Bachillerato Tecnología e Ingeniería · IES El Majuelo).
- *
- * Fuente única: 04_RECURSOS_COMUNES/interactivos/logica_digital/. Cada .elpx lleva una
- * copia empaquetada; no editar las copias, editar aquí y volver a empaquetar.
- * Pruebas: `node test_logica.js` (deben pasar todas antes de empaquetar).
- *
- * Modelo: lógica IDEAL de dos estados (0 y 1). No representa tensiones, tiempos de
- * propagación, rebotes ni ningún otro fenómeno eléctrico real.
- *
- * NOTACIÓN ÚNICA (decisión 2026-10-05):
- *   - Entradas en MAYÚSCULA (A, B, C… o inicial con significado: P, V, M1…).
- *   - Salida S (S1, S2… si hay varias).
- *   - Producto con punto explícito A·B; suma +; XOR ⊕; negación con barra encima.
- *   - Tablas: columnas A B C | S, filas 000→111, A = bit de mayor peso.
- * Para ESCRIBIR expresiones (teclado) se aceptan además: * . & (producto), | (suma),
- * ^ (XOR) y, para negar, ' detrás o ¬ ! ~ delante. Lo que se MUESTRA usa siempre
- * la notación única (aHTML / aLatex).
- * Precedencia: negación > producto (·) > XOR (⊕) > suma (+). Ante la duda, paréntesis.
- */
+/* sha256 a70c6307c974 */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
   else root.LogicaDigital = factory();

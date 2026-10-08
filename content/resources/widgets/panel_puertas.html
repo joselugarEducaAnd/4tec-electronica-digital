@@ -4,13 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Laboratorio de puertas lógicas</title>
-<!--
-  Escena «panel de puertas» sobre logica.js (fuente única: 04_RECURSOS_COMUNES/interactivos/
-  logica_digital/). Configuración, por orden de prioridad: atributo name del iframe, #hash, ?query.
-    puertas=NOT,AND,OR      puertas disponibles (por defecto NOT,AND,OR,NAND,NOR,XOR)
-    modo=explorar|predecir  modo inicial (el alumnado puede cambiarlo)
-  Ejemplo dentro del .elpx: <iframe name="puertas=NOT,AND,OR;modo=explorar" …>
--->
 <style>
 :root{
   --tinta:#1d2733; --suave:#4b5866; --fondo:#ffffff; --panel:#f6f8fa; --linea:#c9d4de;
@@ -117,28 +110,7 @@ tr.actual td:first-child{box-shadow:inset 4px 0 0 var(--uno)}
 </div>
 
 <script>
-/* logica.js · sha256 7c671c4a7b1e (copia empaquetada: no editar aquí) */
-/*
- * logica.js — Base lógica común de los interactivos de electrónica digital
- * (4º ESO Tecnología y 2º Bachillerato Tecnología e Ingeniería · IES El Majuelo).
- *
- * Fuente única: 04_RECURSOS_COMUNES/interactivos/logica_digital/. Cada .elpx lleva una
- * copia empaquetada; no editar las copias, editar aquí y volver a empaquetar.
- * Pruebas: `node test_logica.js` (deben pasar todas antes de empaquetar).
- *
- * Modelo: lógica IDEAL de dos estados (0 y 1). No representa tensiones, tiempos de
- * propagación, rebotes ni ningún otro fenómeno eléctrico real.
- *
- * NOTACIÓN ÚNICA (decisión 2026-10-05):
- *   - Entradas en MAYÚSCULA (A, B, C… o inicial con significado: P, V, M1…).
- *   - Salida S (S1, S2… si hay varias).
- *   - Producto con punto explícito A·B; suma +; XOR ⊕; negación con barra encima.
- *   - Tablas: columnas A B C | S, filas 000→111, A = bit de mayor peso.
- * Para ESCRIBIR expresiones (teclado) se aceptan además: * . & (producto), | (suma),
- * ^ (XOR) y, para negar, ' detrás o ¬ ! ~ delante. Lo que se MUESTRA usa siempre
- * la notación única (aHTML / aLatex).
- * Precedencia: negación > producto (·) > XOR (⊕) > suma (+). Ante la duda, paréntesis.
- */
+/* sha256 a70c6307c974 */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
   else root.LogicaDigital = factory();
