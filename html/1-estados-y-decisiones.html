@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es" id="exe-page"><head><meta charset="utf-8">
+<meta name="generator" content="eXeLearning v4"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1. Estados y decisiones</title><meta name="description" content="Electrónica digital: del 0 y 1 al circuito que decide">
+<link rel="icon" type="image/x-icon" href="../libs/favicon.ico">
+<script>document.querySelector("html").classList.add("js");</script>
+<script src="../libs/jquery/jquery.min.js"> </script><script src="../libs/common_i18n.js"> </script>
+<script src="../libs/common.js"> </script><script src="../libs/exe_export.js"> </script>
+<script src="../libs/bootstrap/bootstrap.bundle.min.js"> </script>
+<link rel="stylesheet" href="../libs/bootstrap/bootstrap.min.css">
+<script src="../idevices/text/text.js"></script><link rel="stylesheet" href="../idevices/text/text.css">
+<link rel="stylesheet" href="../content/css/base.css"><script src="../theme/style.js"> </script>
+<link rel="stylesheet" href="../theme/style.css"><link rel="stylesheet" href="../theme/zzz-majuelo.css">
+</head><body class="exe-export exe-web-site"><script>document.body.className+=" js"</script>
+<div class="exe-content exe-export pre-js siteNav-hidden"><nav id="siteNav"><ul>
+<li class=""><a href="../index.html" class=" main-node no-ch">Lógica que decide</a></li>
+<li class="active"><a href="../html/1-estados-y-decisiones.html" class="active no-ch">1. Estados y decisiones</a></li>
+<li class=""><a href="../html/2-el-bit-y-el-binario.html" class=" no-ch">2. El bit y el binario</a></li>
+<li class=""><a href="../html/3-puertas-basicas.html" class=" no-ch">3. Puertas básicas</a></li>
+<li class=""><a href="../html/4-mas-puertas.html" class=" no-ch">4. Más puertas</a></li>
+<li class=""><a href="../html/5-del-enunciado-al-circuito.html" class=" no-ch">5. Del enunciado al circuito</a></li>
+<li class=""><a href="../html/6-circuitos-equivalentes.html" class=" no-ch">6. Circuitos equivalentes</a></li>
+<li class=""><a href="../html/7-simulacion-y-comprobacion.html" class=" no-ch">7. Simulación y comprobación</a></li>
+<li class=""><a href="../html/8-reto-de-diseno.html" class=" no-ch">8. Reto de diseño</a></li>
+<li class=""><a href="../html/9-preparar-el-examen.html" class=" no-ch">9. Preparar el examen</a></li>
+<li class=""><a href="../html/glosario.html" class=" no-ch">Glosario</a></li>
+</ul></nav><main id="page-1-estados-y-decisiones" class="page">
+<header class="main-header"><div class="package-header"><p class="package-title">Lógica que decide</p></div>
+<div class="page-header"><h1 class="page-title">1. Estados y decisiones</h1></div></header>
+<div id="page-content-page-1-estados-y-decisiones" class="page-content"><article class="box no-header"><div class="box-content">
+<div class="idevice_node text" data-idevice-type="text"><style>.exe-content{--chrome:#22425c;--chrome-osc:#162c3e;--chrome-tinte:#eef2f6;--chrome-linea:#c9d4de}.neg{text-decoration:overline;text-decoration-thickness:1.5px}.lectura-oculta{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}figure{margin:1.2em auto;text-align:center}figcaption{font-size:.92em;color:#4b5866;margin-top:.4em}.exe-content table.tabla-datos.tabla-verdad{width:auto;min-width:14em;margin:1em auto;text-align:center}.exe-content table.tabla-verdad th{text-align:center}table.tabla-verdad td,table.tabla-verdad th{padding:.35em .9em;font-family:"DejaVu Sans Mono",Menlo,Consolas,monospace}table.tabla-verdad .col-s{font-weight:700}details.solucion{margin:.9em 0 .2em;padding:.6em .8em;border:1px solid #c9d4de;border-radius:8px;background:#f8fafc}details.solucion>summary{cursor:pointer;font-weight:700;min-height:44px;display:list-item;padding:.5em 0}.exe-content table.tabla-datos.tabla-hex{width:auto;margin:1em auto;text-align:center;font-family:"DejaVu Sans Mono",Menlo,Consolas,monospace;font-size:.92em}.exe-content table.tabla-hex th{text-align:left}.exe-content table.tabla-hex td{padding:.3em .55em}.exe-content table.tabla-hex tr.fin-bloque td,.exe-content table.tabla-hex tr.fin-bloque th{border-bottom:3px solid #22425c}.desplazable{max-width:100%;overflow-x:auto}dl.glosario dt{font-weight:700;margin-top:.8em;color:#162c3e}dl.glosario dd{margin:.2em 0 0 1.2em}</style><div class="bloque bloque-actividad"><p class="bloque-titulo">Para empezar (no cuenta para nota)</p>
+<p>Comenta con tu compañero o compañera de mesa:</p>
+<ol>
+<li>Di tres aparatos de casa o del instituto que hacen algo solos cuando pasa una cosa.</li>
+<li>Un termómetro de aguja y uno de números: ¿cuál puede marcar 21,37 grados?</li>
+<li>¿Qué crees que quiere decir que un aparato sea «digital»?</li>
+</ol>
+<p>No hay respuestas malas: sirven para saber de dónde partimos.</p></div>
+<h2>Señal analógica y señal digital</h2>
+<div class="bloque bloque-teoria"><p class="bloque-titulo">Qué es una señal</p>
+<p>Una <strong>señal</strong> es una magnitud que lleva información, como una tensión eléctrica o una temperatura.</p>
+<ul>
+<li>Una <strong>señal analógica</strong> puede tomar <strong>cualquier valor</strong> dentro de un intervalo. La aguja de un termómetro puede quedarse en cualquier punto.</li>
+<li>Una <strong>señal digital</strong> solo puede tomar <strong>unos pocos valores fijos</strong>. En esta unidad, solo dos: <strong>0</strong> y <strong>1</strong>.</li>
+</ul></div>
+<figure><img src="../content/resources/senal_analogica_digital.svg" alt="A la izquierda, una curva que sube y baja suavemente: señal analógica. A la derecha, una línea que salta entre dos niveles, 0 y 1: señal digital." style="width:100%;height:auto;max-width:900px"><figcaption>Señal analógica y señal digital.</figcaption></figure>
+<h2>Estado, entrada y salida</h2>
+<div class="bloque bloque-teoria"><p class="bloque-titulo">Tres palabras que usaremos siempre</p>
+<ul>
+<li><strong>Estado:</strong> el valor que tiene una señal digital en un momento concreto. Solo puede ser 0 o 1.</li>
+<li><strong>Entrada:</strong> lo que el sistema recibe de fuera: un pulsador, un interruptor, un sensor. Cada entrada se nombra con una <strong>letra mayúscula</strong>: A, B, C… o la inicial de lo que mide (P para la puerta).</li>
+<li><strong>Salida:</strong> lo que el sistema produce: una lámpara, una sirena, un motor. La llamamos <strong>S</strong>.</li>
+</ul>
+<p>Un <strong>sensor</strong> es un componente que detecta algo del exterior (luz, movimiento, temperatura…) y lo convierte en una señal.</p></div>
+<h2>¿Qué significa el 1?</h2>
+<p>El 1 no significa siempre «encendido». Significa <strong>lo que tú decidas</strong>, y por eso hay que escribirlo. Sin esa frase, un 1 no dice nada.</p>
+<figure><img src="../content/resources/sensor_puerta.svg" alt="Dos dibujos de una puerta vista desde arriba. Cerrada: P = 0. Abierta: P = 1. Debajo, la definición: P = 1 significa que el sensor detecta la puerta abierta." style="width:100%;height:auto;max-width:900px"><figcaption>El 1 de P se define con una frase.</figcaption></figure>
+<div class="bloque bloque-nota"><p class="bloque-titulo">Cuidado con los contactos</p>
+<p>Muchos sensores de puerta tienen un contacto que está <strong>cerrado</strong> cuando la puerta está cerrada y se <strong>abre</strong> al abrirla. Por eso no basta con decir «el contacto está abierto»: hay que decir qué <strong>detecta</strong>. Nosotros siempre escribiremos la definición así: <em>«P = 1 significa que el sensor detecta la puerta abierta»</em>.</p></div>
+<div class="bloque bloque-resuelto"><p class="bloque-titulo">Ejemplo resuelto: la alarma de casa</p><p><em>Situación:</em> la sirena debe sonar si la alarma está conectada con el mando y el sensor detecta la puerta abierta.</p><div class="desplazable"><table class="tabla-datos"><thead><tr><th>Letra</th><th>Qué es</th><th>Qué significa el 1</th></tr></thead><tbody><tr><td>C</td><td>Entrada: el mando</td><td>La alarma está conectada.</td></tr><tr><td>P</td><td>Entrada: sensor de la puerta</td><td>El sensor detecta la puerta abierta.</td></tr><tr><td>S</td><td>Salida: la sirena</td><td>La sirena suena.</td></tr></tbody></table></div><p>Fíjate: hay dos entradas y una salida, y de cada letra se dice qué significa su 1. Esta alarma te acompañará en toda la unidad.</p></div>
+<div class="bloque bloque-actividad"><p class="bloque-titulo">Actividad guiada: la luz de la escalera</p><p>En la escalera del bloque hay una luz que se enciende cuando alguien pulsa el pulsador del portal, <strong>pero solo si es de noche</strong> (lo detecta un sensor de luz).</p>
+<ol><li>¿Cuántas entradas hay? ¿Y salidas?</li><li>Pon una letra a cada una y escribe qué significa su 1.</li></ol><details class="solucion"><summary>Comprueba tu respuesta</summary><div class="desplazable"><table class="tabla-datos"><thead><tr><th>Letra</th><th>Qué es</th><th>Qué significa el 1</th></tr></thead><tbody><tr><td>P</td><td>Entrada: el pulsador</td><td>Alguien pulsa el pulsador.</td></tr><tr><td>N</td><td>Entrada: sensor de luz</td><td>El sensor detecta que es de noche.</td></tr><tr><td>S</td><td>Salida: la luz</td><td>La luz se enciende.</td></tr></tbody></table></div><p>Dos entradas y una salida. Otras letras valen si explicas qué significa el 1 de cada una.</p></details></div>
+<div class="bloque bloque-actividad"><p class="bloque-titulo">Practica tú</p><p>Para cada aparato, di cuáles son sus entradas y su salida, ponles una letra y escribe qué significa el 1 de cada una.</p>
+<ol>
+<li><strong>Secador de manos automático:</strong> sopla aire cuando un sensor detecta las manos debajo.</li>
+<li><strong>Ventilador del invernadero:</strong> se pone en marcha si el interruptor está en «automático» y un sensor detecta que hace demasiado calor.</li>
+</ol><details class="solucion"><summary>Comprueba tu respuesta</summary><div class="desplazable"><table class="tabla-datos"><thead><tr><th>Aparato</th><th>Entradas (qué significa el 1)</th><th>Salida (qué significa el 1)</th></tr></thead><tbody><tr><td>Secador</td><td>M: el sensor detecta manos.</td><td>S: el secador sopla.</td></tr><tr><td>Ventilador</td><td>A: el interruptor está en automático.<br>T: el sensor detecta demasiado calor.</td><td>S: el ventilador funciona.</td></tr></tbody></table></div></details></div>
+<div class="bloque bloque-actividad"><p class="bloque-titulo">Autoevaluación</p><p>¿Verdadero o falso? Piensa la respuesta y después ábrela.</p>
+<ol><li>Una señal digital puede valer 0,5.</li><li>Si P = 1, la puerta está abierta, pase lo que pase.</li><li>Un pulsador es una entrada y una lámpara es una salida.</li></ol><details class="solucion"><summary>Comprueba tu respuesta</summary><ol>
+<li><strong>Falso.</strong> En esta unidad una señal digital solo vale 0 o 1.</li>
+<li><strong>Depende de la definición.</strong> P = 1 significa lo que hayamos escrito. Con nuestra definición («el sensor detecta la puerta abierta»), sí; con otra, podría significar lo contrario.</li>
+<li><strong>Verdadero.</strong> El pulsador da información al sistema; la lámpara es lo que el sistema produce.</li></ol></details></div></div>
+</div></article></div></main><div class="nav-buttons"><a href="../index.html" class="nav-button nav-button-left"><span>Anterior</span></a><a href="2-el-bit-y-el-binario.html" class="nav-button nav-button-right"><span>Siguiente</span></a></div>
+<footer id="siteFooter"><div id="siteFooterContent"><div id="packageLicense" class="cc cc-by-sa"><p><span class="license-label">Licencia: </span><a href="https://creativecommons.org/licenses/by-sa/4.0/" class="license">Creative Commons: Reconocimiento - compartir igual 4.0</a></p></div></div></footer>
+</div></body></html>

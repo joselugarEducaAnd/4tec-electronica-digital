@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banco de circuitos</title>
+<!--
+  Banco de circuitos combinacionales sobre logica.js (fuente única: 04_RECURSOS_COMUNES/
+  interactivos/logica_digital/). Configuración, por orden de prioridad: name del iframe, #hash, ?query.
+    modo=ver|predecir|montar
+    escena=<id>                 (modos ver/predecir) circuito ya montado: ver ESCENAS más abajo
+    puertas=NOT,AND,OR,...      (modo montar) puertas que se pueden añadir
+    maxent=2|3|4                (modo montar) entradas máximas por puerta (por defecto 3)
+    entradas=A,B                (modo montar) entradas iniciales
+    salidas=S | S1,S2           (modo montar) salidas del circuito (por defecto S)
+    display=si                  (modo montar) salidas a…g conectadas a un display de 7 segmentos
+    maxpuertas=14               (modo montar) puertas máximas (4-40; 2º TECI necesita más)
+    objetivo=0001 | hex7seg     (modo montar) tabla objetivo de la primera salida (0, 1, ? sin dar,
+                                x da igual) o, con display, la del decodificador hexadecimal 0-F
+    id=<texto>                  clave del guardado automático en este navegador
+    m=<montaje>                 montaje guardado (lo escribe «Copiar enlace»)
+  Modelo ideal de dos estados: no simula tensiones, retrasos ni consumos.
+-->
+<style>
+:root{--tinta:#1d2733;--suave:#4b5866;--panel:#f6f8fa;--linea:#c9d4de;--acento:#22425c;--acento-osc:#162c3e;
+  --uno:#b34700;--uno-fondo:#fff1e6;--cero:#5f6b77;--ok:#1f6e43;--ok-fondo:#e8f5ee;--mal:#9b2c2c;--mal-fondo:#fbeaea;--foco:#0b62d6;--sel:#7a3fb0}
+*{box-sizing:border-box}
+html,body{margin:0;background:transparent;color:var(--tinta);font-family:Verdana,"DejaVu Sans",Arial,sans-serif;font-size:16px;line-height:1.45}
+.panel{max-width:1000px;margin:0 auto;padding:12px;background:#fff;border:1px solid var(--linea);border-radius:12px}
+h2{font-size:1.02rem;margin:.2rem 0 .45rem;color:var(--acento-osc)}
+h3{font-size:.95rem;margin:.6rem 0 .3rem;color:var(--acento-osc)}
+button,select,input[type=text]{font:inherit;color:inherit}
+button{cursor:pointer;min-height:44px;min-width:44px;border-radius:8px;border:2px solid var(--acento);background:#fff;padding:.3rem .7rem}
+button:focus-visible,select:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--foco);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--acento);color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+select,input[type=text]{min-height:40px;border:2px solid var(--linea);border-radius:6px;padding:.2rem .4rem;background:#fff}
+.fila{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#abrir-archivo{max-width:100%;min-width:0}label.fila{max-width:100%}
+.caja{background:var(--panel);border:1px solid var(--linea);border-radius:10px;padding:10px;margin-top:10px}
+.lienzo{overflow-x:auto;border:1px solid var(--linea);border-radius:10px;background:#fff;margin-top:10px}
+.lienzo svg{display:block}
+.pin{cursor:pointer}
+.pin .aro{fill:#fff;stroke:var(--acento);stroke-width:2.5}
+.pin.sel .aro{fill:#e9dbf6;stroke:var(--sel);stroke-width:4}
+.pin:focus{outline:none}.pin:focus-visible .aro{stroke:var(--foco);stroke-width:5}
+.tog{cursor:pointer}.tog:focus{outline:none}.tog:focus-visible .tog-caja{stroke:var(--foco);stroke-width:5}
+.aviso{margin-top:10px;padding:.55rem .7rem;border-radius:8px;border-left:5px solid var(--acento);background:#eef2f6;min-height:2.4em}
+.aviso.ok{border-color:var(--ok);background:var(--ok-fondo)}
+.aviso.mal{border-color:var(--mal);background:var(--mal-fondo)}
+.diag li{margin:.15rem 0}
+.diag .prob{color:var(--mal)}
+.diag .av{color:#6b4e00}
+table{border-collapse:collapse;margin:.4rem auto;text-align:center}
+th,td{border:1px solid var(--linea);padding:0;min-width:2.6em}
+th{background:#e8eef4;padding:.3rem .45rem;font-weight:700}
+td{font-family:"DejaVu Sans Mono",Menlo,Consolas,monospace}
+td button{width:100%;border:0;border-radius:0;background:transparent;min-height:38px;font-family:inherit}
+tr.actual td{background:#fff4d6;font-weight:700}
+td.inter{color:var(--suave)}
+td.s{font-weight:700}
+td.bien{background:var(--ok-fondo)}td.malc{background:var(--mal-fondo)}
+.lista-g{list-style:none;padding:0;margin:0}
+.lista-g li{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--linea)}
+.lista-g .nom{font-weight:700;min-width:6.5em}
+.lista-g label{max-width:100%;display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center}
+.lista-g input[type=text]{max-width:100%;min-width:0}
+.lista-g input[size="28"]{width:18em}
+.leyenda{font-size:.92rem;color:var(--suave)}
+.leyenda dt{font-weight:700;color:var(--tinta);display:inline}
+.leyenda dd{display:inline;margin:0 .8em 0 .2em}
+.pasos li{margin:.15rem 0}
+.oculto{display:none!important}
+.visualmente-oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.pie{font-size:.85rem;color:var(--suave);margin:.6rem 0 0}
+textarea{width:100%;font-family:"DejaVu Sans Mono",Menlo,monospace;font-size:.85rem}
+</style>
+</head>
+<body>
+<div class="panel" id="panel">
+  <noscript><p><strong>El banco de circuitos necesita JavaScript.</strong> Sin él, resuelve el circuito en papel: tabla de verdad, expresión y esquema.</p></noscript>
+
+  <!-- ===== cabecera del modo ver / predecir ===== -->
+  <div id="cab-ver" class="oculto">
+    <h2 id="titulo-escena"></h2>
+    <p id="enunciado-escena"></p>
+    <dl class="leyenda" id="leyenda"></dl>
+    <div class="fila" role="group" aria-label="Modo">
+      <button type="button" id="m-ver" aria-pressed="true">Explorar</button>
+      <button type="button" id="m-predecir" aria-pressed="false">Predecir</button>
+    </div>
+  </div>
+
+  <!-- ===== barra del modo montar ===== -->
+  <div id="cab-montar" class="oculto">
+    <h2>Monta tu circuito</h2>
+    <div class="fila" id="paleta" role="group" aria-label="Añadir puerta"></div>
+    <div class="fila" style="margin-top:6px">
+      <button type="button" id="mas-entrada">+ Entrada</button>
+      <button type="button" id="menos-entrada">− Entrada</button>
+      <button type="button" id="deshacer">Deshacer</button>
+      <button type="button" id="vaciar">Empezar de nuevo</button>
+    </div>
+  </div>
+
+  <p class="leyenda" id="ayuda-lienzo"></p>
+  <div class="fila" role="group" aria-label="Tamaño del esquema">
+    <button type="button" id="z-menos" aria-label="Alejar el esquema">−</button>
+    <button type="button" id="z-mas" aria-label="Acercar el esquema">+</button>
+    <button type="button" id="z-ajustar">Ajustar al ancho</button>
+    <span class="leyenda" id="z-txt">100 %</span>
+  </div>
+  <div class="lienzo" id="lienzo" role="group" aria-label="Esquema del circuito"></div>
+
+  <div class="fila oculto" id="pred" style="margin-top:8px">
+    <span id="t-pred">¿Cuánto vale la salida?</span>
+    <button type="button" id="p0" aria-describedby="t-pred">Predigo 0</button>
+    <button type="button" id="p1" aria-describedby="t-pred">Predigo 1</button>
+  </div>
+  <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
+
+  <div class="caja" id="caja-pasos">
+    <h3>Paso a paso</h3>
+    <ol class="pasos" id="pasos"></ol>
+  </div>
+
+  <!-- ===== conexiones (montar): alternativa completa sin ratón ===== -->
+  <div class="caja oculto" id="caja-conex">
+    <h3>Qué significa cada señal</h3>
+    <ul class="lista-g" id="lista-entradas"></ul>
+    <ul class="lista-g" id="lista-salidas"></ul>
+    <h3 id="t-puertas">Tus puertas</h3>
+    <ul class="lista-g" id="lista-puertas"></ul>
+    <div id="diag" class="diag"></div>
+  </div>
+
+  <div class="caja" id="caja-tabla">
+    <h3 id="t-tabla">Tabla de verdad del circuito</h3>
+    <label class="leyenda"><input type="checkbox" id="ver-inter"> Mostrar las salidas intermedias</label>
+    <div id="tabla" style="overflow-x:auto"></div>
+    <p class="leyenda" id="tabla-ayuda"></p>
+    <div class="fila oculto" id="fila-comparar" style="justify-content:center">
+      <button type="button" id="comparar">Comparar el circuito con mi tabla</button>
+      <button type="button" id="limpiar-obj">Borrar mi tabla</button>
+    </div>
+  </div>
+
+  <!-- ===== guardar / evidencias (montar) ===== -->
+  <div class="caja oculto" id="caja-guardar">
+    <h3>Guardar y entregar</h3>
+    <div class="fila">
+      <button type="button" id="copiar-enlace">Copiar enlace del montaje</button>
+      <button type="button" id="bajar-imagen">Descargar imagen</button>
+      <button type="button" id="bajar-archivo">Descargar archivo</button>
+      <label class="fila"><span>Abrir archivo:</span> <input type="file" id="abrir-archivo" accept=".txt,text/plain"></label>
+    </div>
+    <textarea id="enlace" rows="3" readonly aria-label="Enlace del montaje" class="oculto"></textarea>
+    <p class="leyenda">El montaje se guarda solo en este navegador mientras trabajas. Para entregarlo o seguir en otro ordenador, usa el enlace o el archivo.</p>
+  </div>
+  <p class="pie">Modelo ideal: solo dos estados, 0 y 1. Un circuito real tiene tensiones, retrasos y consumos que aquí no aparecen.</p>
+</div>
+<script>
+/* logica.js · sha256 7c671c4a7b1e (copia empaquetada: no editar aquí) */
+/*
+ * logica.js — Base lógica común de los interactivos de electrónica digital
+ * (4º ESO Tecnología y 2º Bachillerato Tecnología e Ingeniería · IES El Majuelo).
+ *
+ * Fuente única: 04_RECURSOS_COMUNES/interactivos/logica_digital/. Cada .elpx lleva una
+ * copia empaquetada; no editar las copias, editar aquí y volver a empaquetar.
+ * Pruebas: `node test_logica.js` (deben pasar todas antes de empaquetar).
+ *
+ * Modelo: lógica IDEAL de dos estados (0 y 1). No representa tensiones, tiempos de
+ * propagación, rebotes ni ningún otro fenómeno eléctrico real.
+ *
+ * NOTACIÓN ÚNICA (decisión 2026-10-05):
+ *   - Entradas en MAYÚSCULA (A, B, C… o inicial con significado: P, V, M1…).
+ *   - Salida S (S1, S2… si hay varias).
+ *   - Producto con punto explícito A·B; suma +; XOR ⊕; negación con barra encima.
+ *   - Tablas: columnas A B C | S, filas 000→111, A = bit de mayor peso.
+ * Para ESCRIBIR expresiones (teclado) se aceptan además: * . & (producto), | (suma),
+ * ^ (XOR) y, para negar, ' detrás o ¬ ! ~ delante. Lo que se MUESTRA usa siempre
+ * la notación única (aHTML / aLatex).
+ * Precedencia: negación > producto (·) > XOR (⊕) > suma (+). Ante la duda, paréntesis.
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.LogicaDigital = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  // ------------------------------------------------------------------ utilidades
+  function bit(v) {
+    if (v === 0 || v === 1) return v;
+    if (v === true) return 1;
+    if (v === false) return 0;
+    throw new Error("Valor lógico no válido: " + v + " (solo 0 o 1)");
+  }
+  function lista(xs) {
+    if (xs.length <= 1) return xs.join("");
+    return xs.slice(0, -1).join(", ") + " y " + xs[xs.length - 1];
+  }
+  function listaO(xs) {
+    if (xs.length <= 1) return xs.join("");
+    return xs.slice(0, -1).join(", ") + " o " + xs[xs.length - 1];
+  }
+
+  // ------------------------------------------------------------------ puertas
+  // fn recibe un array de bits. AND/OR/NAND/NOR/XOR/XNOR admiten 2 o más entradas
+  // (XOR de n entradas = 1 si hay un número impar de unos).
+  var PUERTAS = {
+    NOT:  { nombre: "NOT",  cotidiano: "NO",  minEntradas: 1, maxEntradas: 1,
+            regla: "La salida es lo contrario de la entrada.",
+            fn: function (e) { return e[0] ? 0 : 1; } },
+    AND:  { nombre: "AND",  cotidiano: "Y",   minEntradas: 2, maxEntradas: 8,
+            regla: "La salida vale 1 solo si todas las entradas valen 1.",
+            fn: function (e) { return e.every(function (x) { return x === 1; }) ? 1 : 0; } },
+    OR:   { nombre: "OR",   cotidiano: "O",   minEntradas: 2, maxEntradas: 8,
+            regla: "La salida vale 1 si al menos una entrada vale 1.",
+            fn: function (e) { return e.some(function (x) { return x === 1; }) ? 1 : 0; } },
+    NAND: { nombre: "NAND", cotidiano: "NO-Y", minEntradas: 2, maxEntradas: 8,
+            regla: "Es una AND con la salida negada: vale 0 solo si todas las entradas valen 1.",
+            fn: function (e) { return e.every(function (x) { return x === 1; }) ? 0 : 1; } },
+    NOR:  { nombre: "NOR",  cotidiano: "NO-O", minEntradas: 2, maxEntradas: 8,
+            regla: "Es una OR con la salida negada: vale 1 solo si todas las entradas valen 0.",
+            fn: function (e) { return e.some(function (x) { return x === 1; }) ? 0 : 1; } },
+    XOR:  { nombre: "XOR",  cotidiano: "O exclusiva", minEntradas: 2, maxEntradas: 8,
+            regla: "Con dos entradas, la salida vale 1 si las entradas son distintas.",
+            fn: function (e) { return e.reduce(function (s, x) { return s ^ x; }, 0); } },
+    XNOR: { nombre: "XNOR", cotidiano: "igualdad", minEntradas: 2, maxEntradas: 8,
+            regla: "Con dos entradas, la salida vale 1 si las entradas son iguales.",
+            fn: function (e) { return e.reduce(function (s, x) { return s ^ x; }, 0) ? 0 : 1; } }
+  };
+  var ORDEN_PUERTAS = ["NOT", "AND", "OR", "NAND", "NOR", "XOR", "XNOR"];
+
+  function puerta(tipo) {
+    var p = PUERTAS[tipo];
+    if (!p) throw new Error("Puerta desconocida: " + tipo);
+    return p;
+  }
+  function comprobarAridad(tipo, n) {
+    var p = puerta(tipo);
+    if (n < p.minEntradas || n > p.maxEntradas)
+      throw new Error("La puerta " + tipo + " no admite " + n + " entrada(s)");
+  }
+  function evaluarPuerta(tipo, entradas) {
+    comprobarAridad(tipo, entradas.length);
+    return puerta(tipo).fn(entradas.map(bit));
+  }
+
+  /* Explicación en lenguaje llano de POR QUÉ la salida vale lo que vale.
+   * nombres: nombres de las entradas (por defecto A, B, C…); salida: nombre de la salida. */
+  function explicarPuerta(tipo, entradas, nombres, salida) {
+    entradas = entradas.map(bit);
+    nombres = nombres || entradas.map(function (_, i) { return String.fromCharCode(65 + i); });
+    salida = salida || "S";
+    var s = evaluarPuerta(tipo, entradas);
+    var unos = nombres.filter(function (_, i) { return entradas[i] === 1; });
+    var ceros = nombres.filter(function (_, i) { return entradas[i] === 0; });
+    var todas = entradas.length === 2 ? "las dos entradas" : "todas las entradas";
+    var r;
+    switch (tipo) {
+      case "NOT":
+        r = nombres[0] + " = " + entradas[0] + ", y la NOT da lo contrario"; break;
+      case "AND":
+        r = s ? todas + " valen 1"
+              : lista(ceros) + (ceros.length > 1 ? " valen 0" : " vale 0") + ", y la AND necesita que " + todas + " valgan 1";
+        break;
+      case "OR":
+        r = s ? lista(unos) + (unos.length > 1 ? " valen 1" : " vale 1") + ", y a la OR le basta una entrada a 1"
+              : "ninguna entrada vale 1";
+        break;
+      case "NAND":
+        r = s ? lista(ceros) + (ceros.length > 1 ? " valen 0" : " vale 0") + ": la AND daría 0 y la NAND lo niega"
+              : todas + " valen 1: la AND daría 1 y la NAND lo niega";
+        break;
+      case "NOR":
+        r = s ? "ninguna entrada vale 1: la OR daría 0 y la NOR lo niega"
+              : lista(unos) + (unos.length > 1 ? " valen 1" : " vale 1") + ": la OR daría 1 y la NOR lo niega";
+        break;
+      case "XOR":
+        r = entradas.length === 2
+          ? (s ? "las entradas son distintas" : "las entradas son iguales")
+          : "hay " + unos.length + " entrada(s) a 1, un número " + (unos.length % 2 ? "impar" : "par");
+        break;
+      case "XNOR":
+        r = entradas.length === 2
+          ? (s ? "las entradas son iguales" : "las entradas son distintas")
+          : "hay " + unos.length + " entrada(s) a 1, un número " + (unos.length % 2 ? "impar" : "par");
+        break;
+    }
+    return salida + " = " + s + " porque " + r + ".";
+  }
+
+  // ------------------------------------------------------------------ combinaciones y tablas
+  /* Todas las combinaciones de n entradas, en orden 0…0 → 1…1 (la primera entrada es el
+   * bit de mayor peso). */
+  function combinaciones(n) {
+    if (n < 0 || n > 10) throw new Error("Número de entradas fuera de rango: " + n);
+    var filas = [];
+    for (var k = 0; k < (1 << n); k++) {
+      var f = [];
+      for (var i = n - 1; i >= 0; i--) f.push((k >> i) & 1);
+      filas.push(f);
+    }
+    return filas;
+  }
+  function asignacion(variables, fila) {
+    var o = {};
+    variables.forEach(function (v, i) { o[v] = fila[i]; });
+    return o;
+  }
+  /* f(valores) → 0/1, con valores = {A:0, B:1, …}. */
+  function tablaVerdad(variables, f) {
+    return {
+      variables: variables.slice(),
+      filas: combinaciones(variables.length).map(function (fila) {
+        return { entradas: fila, salida: bit(f(asignacion(variables, fila))) };
+      })
+    };
+  }
+  /* Compara las salidas propuestas (array de 0/1/null) con la tabla correcta. */
+  function comprobarTabla(tabla, propuestas) {
+    if (propuestas.length !== tabla.filas.length)
+      throw new Error("Se esperaban " + tabla.filas.length + " salidas");
+    var res = tabla.filas.map(function (f, i) {
+      var p = propuestas[i];
+      return { fila: i, entradas: f.entradas, esperada: f.salida,
+               propuesta: p === null || p === undefined ? null : bit(p),
+               correcta: p !== null && p !== undefined && bit(p) === f.salida };
+    });
+    return {
+      filas: res,
+      aciertos: res.filter(function (r) { return r.correcta; }).length,
+      vacias: res.filter(function (r) { return r.propuesta === null; }).length,
+      total: res.length
+    };
+  }
+
+  // ------------------------------------------------------------------ expresiones
+  var PREC = { or: 1, xor: 2, and: 3, not: 4, var: 5, const: 5 };
+
+  function tokenizar(texto) {
+    var t = [], i = 0, s = String(texto).normalize("NFD");   // Ā precompuesta → A + barra
+    while (i < s.length) {
+      var c = s[i];
+      if (/\s/.test(c)) { i++; continue; }
+      if (/[A-Z]/.test(c)) {
+        var j = i + 1;
+        while (j < s.length && /[0-9]/.test(s[j])) j++;
+        t.push({ k: "var", v: s.slice(i, j), pos: i }); i = j;
+        // barra encima escrita con carácter combinante (Ā, A̅)
+        while (s[i] === "̄" || s[i] === "̅") { t.push({ k: "post'", pos: i }); i++; }
+        continue;
+      }
+      if (/[a-z]/.test(c)) throw errorExpr("Las variables se escriben en mayúscula: " + c.toUpperCase() + " en lugar de " + c, i);
+      if (c === "0" || c === "1") { t.push({ k: "const", v: +c, pos: i }); i++; continue; }
+      if ("·*.&∧⋅".indexOf(c) >= 0) { t.push({ k: "and", pos: i }); i++; continue; }
+      if ("+|∨".indexOf(c) >= 0) { t.push({ k: "or", pos: i }); i++; continue; }
+      if ("⊕^".indexOf(c) >= 0) { t.push({ k: "xor", pos: i }); i++; continue; }
+      if ("'’".indexOf(c) >= 0) { t.push({ k: "post'", pos: i }); i++; continue; }
+      if ("¬!~".indexOf(c) >= 0) { t.push({ k: "pre¬", pos: i }); i++; continue; }
+      if (c === "(" || c === ")") { t.push({ k: c, pos: i }); i++; continue; }
+      throw errorExpr("Símbolo no reconocido: «" + c + "»", i);
+    }
+    return t;
+  }
+  function errorExpr(msg, pos) { var e = new Error(msg); e.posicion = pos; e.expresion = true; return e; }
+
+  /* Convierte texto en un árbol. opciones.yuxtaposicion = true permite AB como A·B
+   * (por defecto NO: la notación exige el punto y el error lo dice). */
+  function analizar(texto, opciones) {
+    opciones = opciones || {};
+    var tk = tokenizar(texto), p = 0;
+    if (!tk.length) throw errorExpr("La expresión está vacía", 0);
+    function ver() { return tk[p]; }
+    function tomar(k) {
+      var x = tk[p];
+      if (!x || x.k !== k) throw errorExpr(k === ")" ? "Falta cerrar un paréntesis" : "Se esperaba " + k, x ? x.pos : String(texto).length);
+      p++; return x;
+    }
+    function nario(tipo, sub, opTok) {
+      var a = [sub()];
+      while (ver() && ver().k === opTok) { p++; a.push(sub()); }
+      return a.length === 1 ? a[0] : { t: tipo, args: a };
+    }
+    function expr() { return nario("or", xorE, "or"); }
+    function xorE() { return nario("xor", andE, "xor"); }
+    function andE() {
+      var a = [unario()];
+      for (;;) {
+        var x = ver();
+        if (x && x.k === "and") { p++; a.push(unario()); continue; }
+        if (x && (x.k === "var" || x.k === "const" || x.k === "(" || x.k === "pre¬")) {
+          if (!opciones.yuxtaposicion)
+            throw errorExpr("Falta el punto (·) del producto antes de la posición " + (x.pos + 1), x.pos);
+          a.push(unario()); continue;
+        }
+        break;
+      }
+      return a.length === 1 ? a[0] : { t: "and", args: a };
+    }
+    function unario() {
+      var x = ver();
+      if (x && x.k === "pre¬") { p++; return posfijo({ t: "not", a: unario() }); }
+      return posfijo(atomo());
+    }
+    function posfijo(n) {
+      while (ver() && ver().k === "post'") { p++; n = { t: "not", a: n }; }
+      return n;
+    }
+    function atomo() {
+      var x = ver();
+      if (!x) throw errorExpr("La expresión termina antes de tiempo", String(texto).length);
+      if (x.k === "var") { p++; return { t: "var", n: x.v }; }
+      if (x.k === "const") { p++; return { t: "const", v: x.v }; }
+      if (x.k === "(") { p++; var e = expr(); tomar(")"); return e; }
+      throw errorExpr("Falta una variable antes de la posición " + (x.pos + 1), x.pos);
+    }
+    var r = expr();
+    if (p < tk.length) throw errorExpr(tk[p].k === ")" ? "Sobra un paréntesis de cierre" : "Sobra algo a partir de la posición " + (tk[p].pos + 1), tk[p].pos);
+    return r;
+  }
+
+  function evaluar(n, valores) {
+    switch (n.t) {
+      case "var":
+        if (!(n.n in valores)) throw new Error("Falta el valor de " + n.n);
+        return bit(valores[n.n]);
+      case "const": return n.v;
+      case "not": return evaluar(n.a, valores) ? 0 : 1;
+      case "and": return n.args.every(function (a) { return evaluar(a, valores) === 1; }) ? 1 : 0;
+      case "or": return n.args.some(function (a) { return evaluar(a, valores) === 1; }) ? 1 : 0;
+      case "xor": return n.args.reduce(function (s, a) { return s ^ evaluar(a, valores); }, 0);
+    }
+    throw new Error("Nodo desconocido: " + n.t);
+  }
+  function compararNombres(a, b) {
+    var ma = /^([A-Z])(\d*)$/.exec(a), mb = /^([A-Z])(\d*)$/.exec(b);
+    if (ma[1] !== mb[1]) return ma[1] < mb[1] ? -1 : 1;
+    return (+ma[2] || 0) - (+mb[2] || 0);
+  }
+  function variables(n) {
+    var s = {};
+    (function rec(x) {
+      if (x.t === "var") s[x.n] = 1;
+      else if (x.t === "not") rec(x.a);
+      else if (x.args) x.args.forEach(rec);
+    })(n);
+    return Object.keys(s).sort(compararNombres);
+  }
+
+  function escHTML(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function formatear(n, f, padre) {
+    var s;
+    switch (n.t) {
+      case "var": s = f.var(n.n); break;
+      case "const": s = String(n.v); break;
+      case "not": return f.neg(formatear(n.a, f, null));     // la barra agrupa: nunca paréntesis
+      case "and": s = n.args.map(function (a) { return formatear(a, f, "and"); }).join(f.and); break;
+      case "or": s = n.args.map(function (a) { return formatear(a, f, "or"); }).join(f.or); break;
+      case "xor": s = n.args.map(function (a) { return formatear(a, f, "xor"); }).join(f.xor); break;
+    }
+    return padre && PREC[n.t] < PREC[padre] ? f.par(s) : s;
+  }
+  var F_HTML = { var: escHTML, and: " · ", or: " + ", xor: " ⊕ ",
+    neg: function (s) { return '<span class="neg">' + s + "</span>"; },
+    par: function (s) { return "(" + s + ")"; } };
+  var F_LATEX = { var: function (v) { var m = /^([A-Z])(\d+)$/.exec(v); return m ? m[1] + "_{" + m[2] + "}" : v; },
+    and: " \\cdot ", or: " + ", xor: " \\oplus ",
+    neg: function (s) { return "\\overline{" + s + "}"; },
+    par: function (s) { return "\\left(" + s + "\\right)"; } };
+  var F_ENTRADA = { var: function (v) { return v; }, and: "·", or: " + ", xor: " ⊕ ",
+    neg: function (s) { return "¬(" + s + ")"; },
+    par: function (s) { return "(" + s + ")"; } };
+  var F_LECTURA = { var: function (v) { return v; }, and: " y ", or: " o ", xor: " o exclusiva ",
+    neg: function (s) { return "no (" + s + ")"; },
+    par: function (s) { return "(" + s + ")"; } };
+
+  /* aHTML: para pantalla; la negación es <span class="neg"> (CSS: text-decoration: overline)
+   * y el lector de pantalla debe recibir aLectura en un aria-label. */
+  function aHTML(n) { return formatear(n, F_HTML, null); }
+  function aLatex(n) { return formatear(n, F_LATEX, null); }
+  function aEntrada(n) { return formatear(n, F_ENTRADA, null); }   // reescribible y re-analizable
+  function aLectura(n) { return formatear(n, F_LECTURA, null); }   // texto para lector de pantalla
+
+  function tablaExpresion(n, vars) {
+    vars = vars || variables(n);
+    return tablaVerdad(vars, function (v) { return evaluar(n, v); });
+  }
+
+  // ------------------------------------------------------------------ equivalencia
+  /* f y g: funciones (valores → bit) o árboles de expresión. Recorre las 2^n combinaciones. */
+  function comoFuncion(x) { return typeof x === "function" ? x : function (v) { return evaluar(x, v); }; }
+  function compararFunciones(vars, f, g) {
+    f = comoFuncion(f); g = comoFuncion(g);
+    var filas = combinaciones(vars.length).map(function (fila) {
+      var v = asignacion(vars, fila), a = bit(f(v)), b = bit(g(v));
+      return { entradas: fila, f: a, g: b, igual: a === b };
+    });
+    var distintas = filas.filter(function (r) { return !r.igual; });
+    return { equivalentes: distintas.length === 0, filas: filas, contraejemplos: distintas,
+             combinaciones: filas.length };
+  }
+
+  // ------------------------------------------------------------------ circuitos
+  /* Circuito: { entradas: ["A","B"], puertas: [{id:"P1", tipo:"AND", de:["A","B"]}, …],
+   *             salidas: {S: "P1"} }
+   * Valida referencias, aridad y ciclos. Devuelve el orden de cálculo. */
+  function validarCircuito(c) {
+    var ids = {};
+    c.entradas.forEach(function (e) {
+      if (!/^[A-Z]\d*$/.test(e)) throw new Error("Nombre de entrada no válido: " + e);
+      if (ids[e]) throw new Error("Nombre repetido: " + e);
+      ids[e] = "entrada";
+    });
+    c.puertas.forEach(function (g) {
+      if (ids[g.id]) throw new Error("Nombre repetido: " + g.id);
+      ids[g.id] = g;
+      comprobarAridad(g.tipo, g.de.length);
+    });
+    c.puertas.forEach(function (g) {
+      g.de.forEach(function (r) { if (!ids[r]) throw new Error(g.id + " usa una señal que no existe: " + r); });
+    });
+    Object.keys(c.salidas).forEach(function (s) {
+      if (!ids[c.salidas[s]]) throw new Error("La salida " + s + " no está conectada a nada que exista");
+    });
+    // orden topológico (los circuitos combinacionales no tienen realimentación)
+    var orden = [], estado = {};
+    function visitar(id) {
+      if (ids[id] === "entrada" || estado[id] === 2) return;
+      if (estado[id] === 1) throw new Error("El circuito tiene un lazo (realimentación) en " + id);
+      estado[id] = 1;
+      ids[id].de.forEach(visitar);
+      estado[id] = 2; orden.push(id);
+    }
+    c.puertas.forEach(function (g) { visitar(g.id); });
+    return orden;
+  }
+  /* Devuelve el valor de TODAS las señales (entradas, salidas de cada puerta) y de las salidas. */
+  function evaluarCircuito(c, valores) {
+    var orden = validarCircuito(c), senal = {}, porId = {};
+    c.puertas.forEach(function (g) { porId[g.id] = g; });
+    c.entradas.forEach(function (e) {
+      if (!(e in valores)) throw new Error("Falta el valor de la entrada " + e);
+      senal[e] = bit(valores[e]);
+    });
+    orden.forEach(function (id) {
+      var g = porId[id];
+      senal[id] = evaluarPuerta(g.tipo, g.de.map(function (r) { return senal[r]; }));
+    });
+    var sal = {};
+    Object.keys(c.salidas).forEach(function (s) { sal[s] = senal[c.salidas[s]]; });
+    return { senales: senal, salidas: sal, orden: orden };
+  }
+  function tablaCircuito(c, salida) {
+    salida = salida || Object.keys(c.salidas)[0];
+    return tablaVerdad(c.entradas, function (v) { return evaluarCircuito(c, v).salidas[salida]; });
+  }
+  /* Árbol de expresión equivalente a una salida (para mostrar «el circuito escrito»). */
+  function circuitoAExpresion(c, salida) {
+    validarCircuito(c);
+    salida = salida || Object.keys(c.salidas)[0];
+    var porId = {};
+    c.puertas.forEach(function (g) { porId[g.id] = g; });
+    function rec(id) {
+      var g = porId[id];
+      if (!g) return { t: "var", n: id };
+      var a = g.de.map(rec);
+      switch (g.tipo) {
+        case "NOT": return { t: "not", a: a[0] };
+        case "AND": return { t: "and", args: a };
+        case "OR": return { t: "or", args: a };
+        case "XOR": return { t: "xor", args: a };
+        case "NAND": return { t: "not", a: { t: "and", args: a } };
+        case "NOR": return { t: "not", a: { t: "or", args: a } };
+        case "XNOR": return { t: "not", a: { t: "xor", args: a } };
+      }
+    }
+    return rec(c.salidas[salida]);
+  }
+
+  // ------------------------------------------------------------------ circuitos en construcción
+  /* Diagnóstico de un circuito que se está montando (admite entradas de puerta a null).
+   * Devuelve {completo, problemas:[texto], avisos:[texto]} en lenguaje llano. */
+  function diagnosticar(c) {
+    var problemas = [], avisos = [], ids = {};
+    c.entradas.forEach(function (e) { ids[e] = "entrada"; });
+    c.puertas.forEach(function (g) { ids[g.id] = g; });
+    c.puertas.forEach(function (g) {
+      g.de.forEach(function (r, i) {
+        if (r === null || r === undefined || r === "") problemas.push("La entrada " + (i + 1) + " de la puerta " + g.id + " (" + g.tipo + ") no está conectada.");
+        else if (!ids[r]) problemas.push("La puerta " + g.id + " usa una señal que ya no existe.");
+      });
+    });
+    var salidas = Object.keys(c.salidas);
+    if (!salidas.length) problemas.push("No hay ninguna salida.");
+    salidas.forEach(function (s) {
+      var r = c.salidas[s];
+      if (r === null || r === undefined || r === "") problemas.push("La salida " + s + " no está conectada.");
+      else if (!ids[r]) problemas.push("La salida " + s + " está conectada a una señal que ya no existe.");
+    });
+    if (!problemas.length) {
+      try { validarCircuito(c); } catch (e) { problemas.push(e.message.indexOf("lazo") >= 0 ? "Hay un lazo: una puerta acaba recibiendo su propia salida. En estos circuitos las señales solo van hacia delante." : e.message); }
+    }
+    // puertas que no llegan a ninguna salida y entradas sin usar (avisos, no impiden simular)
+    var usadas = {};
+    (function marcar(lista) {
+      lista.forEach(function (r) {
+        if (!r || usadas[r]) return; usadas[r] = 1;
+        var g = ids[r]; if (g && g !== "entrada") marcar(g.de);
+      });
+    })(salidas.map(function (s) { return c.salidas[s]; }));
+    c.puertas.forEach(function (g) { if (!usadas[g.id]) avisos.push("La puerta " + g.id + " no llega a ninguna salida: sobra o falta conectarla."); });
+    c.entradas.forEach(function (e) { if (!usadas[e]) avisos.push("La entrada " + e + " no se usa en ninguna puerta."); });
+    return { completo: problemas.length === 0, problemas: problemas, avisos: avisos };
+  }
+
+  /* Colocación automática por niveles: entradas a la izquierda, cada puerta una columna a la
+   * derecha de la más lejana de sus fuentes, salidas al final. Dentro de cada columna se ordena
+   * por la altura media de las fuentes (menos cruces). Admite entradas de puerta a null. */
+  function disponer(c, opciones) {
+    opciones = opciones || {};
+    var colX = opciones.columna || 170, filaY = opciones.fila || 90, x0 = opciones.x0 || 60, y0 = opciones.y0 || 50;
+    var margen = opciones.margen !== undefined ? opciones.margen : 24;
+    var altoDe = opciones.alto || function (g) { return Math.max(filaY - margen, (g.de.length + 1) * 26); };
+    var porId = {}, nivel = {}, enCurso = {};
+    c.puertas.forEach(function (g) { porId[g.id] = g; });
+    c.entradas.forEach(function (e) { nivel[e] = 0; });
+    function niv(id) {
+      if (nivel[id] !== undefined) return nivel[id];
+      var g = porId[id]; if (!g) return 0;
+      if (enCurso[id]) return 1;                 // lazo: no colgarse; el diagnóstico ya lo avisa
+      enCurso[id] = 1;
+      var m = 0; g.de.forEach(function (r) { if (r) m = Math.max(m, niv(r)); });
+      enCurso[id] = 0;
+      return (nivel[id] = m + 1);
+    }
+    c.puertas.forEach(function (g) { niv(g.id); });
+    var maxN = 0; Object.keys(nivel).forEach(function (k) { maxN = Math.max(maxN, nivel[k]); });
+    var pos = {};
+    c.entradas.forEach(function (e, i) { pos[e] = { x: x0, y: y0 + i * filaY, nivel: 0 }; });
+    for (var n = 1; n <= maxN; n++) {
+      var col = c.puertas.filter(function (g) { return nivel[g.id] === n; });
+      col.forEach(function (g) {
+        var ys = g.de.filter(function (r) { return r && pos[r]; }).map(function (r) { return pos[r].y; });
+        g.__y = ys.length ? ys.reduce(function (a, b) { return a + b; }, 0) / ys.length : 1e9;
+      });
+      col.sort(function (a, b) { return a.__y - b.__y || (a.id < b.id ? -1 : 1); });
+      // separación según la ALTURA real de cada puerta (opciones.alto), no un paso fijo: sin solapes
+      var fondo = -1e9;
+      col.forEach(function (g) {
+        var h = altoDe(g), deseado = g.__y === 1e9 ? fondo + margen + h / 2 : g.__y;
+        var y = Math.max(deseado, fondo + margen + h / 2, y0);
+        pos[g.id] = { x: x0 + n * colX, y: y, nivel: n, alto: h }; fondo = y + h / 2; delete g.__y;
+      });
+    }
+    // salidas: a la altura de su fuente, pero nunca unas encima de otras (varias pueden salir de la misma puerta)
+    var salidas = Object.keys(c.salidas), sepS = opciones.filaSalida || Math.min(filaY, 70), ultimaS = -1e9;
+    salidas.map(function (s, i) { var r = c.salidas[s]; return { s: s, i: i, y: r && pos[r] ? pos[r].y : y0 + i * sepS }; })
+      .sort(function (a, b) { return a.y - b.y || a.i - b.i; })
+      .forEach(function (o) {
+        var y = Math.max(o.y, ultimaS + sepS, y0); ultimaS = y;
+        pos["salida:" + o.s] = { x: x0 + (maxN + 1) * colX, y: y, nivel: maxN + 1 };
+      });
+    var maxY = 0; Object.keys(pos).forEach(function (k) { maxY = Math.max(maxY, pos[k].y + (pos[k].alto || 0) / 2); });
+    return { pos: pos, niveles: maxN, ancho: x0 + (maxN + 1) * colX + 80, alto: maxY + filaY };
+  }
+
+  /* Guardar/abrir un montaje como texto (enlace o archivo). Formato versionado y validado. */
+  var TIPOS_VALIDOS = ORDEN_PUERTAS;
+  function codificarMontaje(m) {
+    var json = JSON.stringify({ v: 1, entradas: m.entradas, significados: m.significados || {}, puertas: m.puertas.map(function (g) { return { id: g.id, tipo: g.tipo, de: g.de }; }), salidas: m.salidas });
+    var b64 = (typeof btoa === "function") ? btoa(unescape(encodeURIComponent(json))) : Buffer.from(json, "utf8").toString("base64");
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function decodificarMontaje(texto) {
+    var b64 = String(texto).trim().replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    var json;
+    try { json = (typeof atob === "function") ? decodeURIComponent(escape(atob(b64))) : Buffer.from(b64, "base64").toString("utf8"); }
+    catch (e) { throw new Error("El enlace o el archivo no contiene un montaje válido."); }
+    var m; try { m = JSON.parse(json); } catch (e) { throw new Error("El enlace o el archivo no contiene un montaje válido."); }
+    if (!m || m.v !== 1 || !Array.isArray(m.entradas) || !Array.isArray(m.puertas) || typeof m.salidas !== "object")
+      throw new Error("El montaje está incompleto o es de otra versión.");
+    m.entradas.forEach(function (e) { if (!/^[A-Z]\d*$/.test(e)) throw new Error("Nombre de entrada no válido: " + e); });
+    m.puertas.forEach(function (g) {
+      if (!/^[A-Za-z]\w*$/.test(g.id) || TIPOS_VALIDOS.indexOf(g.tipo) < 0 || !Array.isArray(g.de)) throw new Error("Hay una puerta no válida en el montaje.");
+      comprobarAridad(g.tipo, g.de.length);
+    });
+    return { entradas: m.entradas, significados: m.significados || {}, puertas: m.puertas, salidas: m.salidas };
+  }
+
+  // ------------------------------------------------------------------ numeración
+  function aBinario(n, bits) {
+    if (!Number.isInteger(n) || n < 0) throw new Error("Solo números naturales: " + n);
+    var s = n.toString(2);
+    if (bits) { if (s.length > bits) throw new Error(n + " no cabe en " + bits + " bits"); s = ("0".repeat(bits) + s).slice(-bits); }
+    return s;
+  }
+  function deBinario(s) {
+    s = String(s).replace(/\s/g, "");
+    if (!/^[01]+$/.test(s)) throw new Error("Un número binario solo lleva ceros y unos: " + s);
+    return parseInt(s, 2);
+  }
+  /* Valor posicional: «1011» → [{bit:1, peso:8}, {bit:0, peso:4}, …] y su suma. */
+  function pasosBinarioADecimal(s) {
+    s = String(s).replace(/\s/g, ""); deBinario(s);
+    var n = s.length;
+    var pasos = s.split("").map(function (b, i) { return { bit: +b, peso: Math.pow(2, n - 1 - i), exponente: n - 1 - i }; });
+    return { pasos: pasos, total: pasos.reduce(function (t, p) { return t + p.bit * p.peso; }, 0) };
+  }
+  /* Divisiones sucesivas entre 2: [{dividendo, cociente, resto}…]; el binario se lee de abajo arriba. */
+  function pasosDecimalABinario(n) {
+    if (!Number.isInteger(n) || n < 0) throw new Error("Solo números naturales: " + n);
+    var pasos = [];
+    if (n === 0) return { pasos: [{ dividendo: 0, cociente: 0, resto: 0 }], binario: "0" };
+    while (n > 0) { pasos.push({ dividendo: n, cociente: Math.floor(n / 2), resto: n % 2 }); n = Math.floor(n / 2); }
+    return { pasos: pasos, binario: pasos.map(function (p) { return p.resto; }).reverse().join("") };
+  }
+  /* Ampliación (4º TEC): hexadecimal. */
+  function aHex(n) { if (!Number.isInteger(n) || n < 0) throw new Error("Solo números naturales: " + n); return n.toString(16).toUpperCase(); }
+  function deHex(s) { s = String(s).trim().toUpperCase(); if (!/^[0-9A-F]+$/.test(s)) throw new Error("Cifra hexadecimal no válida: " + s); return parseInt(s, 16); }
+  function binarioAHexPorGrupos(s) {
+    s = String(s).replace(/\s/g, ""); deBinario(s);
+    while (s.length % 4) s = "0" + s;
+    var g = s.match(/.{4}/g);
+    return { grupos: g, cifras: g.map(function (x) { return aHex(parseInt(x, 2)); }) };
+  }
+
+  return {
+    VERSION: "1.2.0",
+    PUERTAS: PUERTAS, ORDEN_PUERTAS: ORDEN_PUERTAS,
+    bit: bit, evaluarPuerta: evaluarPuerta, explicarPuerta: explicarPuerta,
+    combinaciones: combinaciones, tablaVerdad: tablaVerdad, comprobarTabla: comprobarTabla,
+    analizar: analizar, evaluar: evaluar, variables: variables, tablaExpresion: tablaExpresion,
+    aHTML: aHTML, aLatex: aLatex, aEntrada: aEntrada, aLectura: aLectura,
+    compararFunciones: compararFunciones,
+    validarCircuito: validarCircuito, evaluarCircuito: evaluarCircuito,
+    tablaCircuito: tablaCircuito, circuitoAExpresion: circuitoAExpresion,
+    diagnosticar: diagnosticar, disponer: disponer,
+    codificarMontaje: codificarMontaje, decodificarMontaje: decodificarMontaje,
+    aBinario: aBinario, deBinario: deBinario, pasosBinarioADecimal: pasosBinarioADecimal,
+    pasosDecimalABinario: pasosDecimalABinario, aHex: aHex, deHex: deHex,
+    binarioAHexPorGrupos: binarioAHexPorGrupos,
+    _lista: lista
+  };
+});
+
+</script>
+<script>
+(function () {
+  "use strict";
+  var L = window.LogicaDigital;
+  var $ = function (id) { return document.getElementById(id); };
+  var FUENTE = "Verdana, 'DejaVu Sans', Arial, sans-serif";
+  var C1 = "#b34700", C0 = "#5f6b77", CX = "#9aa5b1", ACENTO = "#22425c";
+
+  // ------------------------------------------------------------------ escenas (circuitos ya montados)
+  var ESCENAS = {
+    alarma2: { titulo: "La alarma (dos entradas)", enunciado: "La sirena suena si la alarma está conectada y el sensor detecta la puerta abierta.",
+      entradas: ["C", "P"], significados: { C: "la alarma está conectada", P: "el sensor detecta la puerta abierta", S: "suena la sirena" },
+      puertas: [{ id: "G1", tipo: "AND", de: ["C", "P"] }], salidas: { S: "G1" } },
+    riego: { titulo: "El riego automático", enunciado: "El riego funciona si la tierra no está húmeda y es de noche.",
+      entradas: ["H", "N"], significados: { H: "el sensor detecta la tierra húmeda", N: "el sensor detecta que es de noche", S: "el riego funciona" },
+      puertas: [{ id: "X", tipo: "NOT", de: ["H"] }, { id: "G1", tipo: "AND", de: ["X", "N"] }], salidas: { S: "G1" } },
+    alarma3: { titulo: "La alarma con ventana", enunciado: "La sirena suena si la alarma está conectada y el sensor detecta la puerta o la ventana abiertas.",
+      entradas: ["C", "P", "V"], significados: { C: "la alarma está conectada", P: "el sensor detecta la puerta abierta", V: "el sensor detecta la ventana abierta", S: "suena la sirena" },
+      puertas: [{ id: "X", tipo: "OR", de: ["P", "V"] }, { id: "G1", tipo: "AND", de: ["C", "X"] }], salidas: { S: "G1" } },
+    alarma3_suma: { titulo: "La alarma con ventana, escrita desde la tabla", enunciado: "El mismo circuito de la alarma con ventana, montado con un producto por cada fila de la tabla en la que S = 1.",
+      entradas: ["C", "P", "V"], significados: { C: "la alarma está conectada", P: "el sensor detecta la puerta abierta", V: "el sensor detecta la ventana abierta", S: "suena la sirena" },
+      puertas: [{ id: "NP", tipo: "NOT", de: ["P"] }, { id: "NV", tipo: "NOT", de: ["V"] },
+                { id: "T1", tipo: "AND", de: ["C", "NP", "V"] }, { id: "T2", tipo: "AND", de: ["C", "P", "NV"] }, { id: "T3", tipo: "AND", de: ["C", "P", "V"] },
+                { id: "G1", tipo: "OR", de: ["T1", "T2", "T3"] }], salidas: { S: "G1" } },
+    puerta_accesible: { titulo: "La puerta accesible", enunciado: "La puerta automática se abre si el sensor detecta a alguien o se pulsa el pulsador accesible, y no está bloqueada.",
+      entradas: ["D", "P", "B"], significados: { D: "el sensor detecta a alguien", P: "se pulsa el pulsador accesible", B: "la puerta está bloqueada", S: "la puerta se abre" },
+      puertas: [{ id: "X", tipo: "OR", de: ["D", "P"] }, { id: "Y", tipo: "NOT", de: ["B"] }, { id: "G1", tipo: "AND", de: ["X", "Y"] }], salidas: { S: "G1" } },
+    pasillo: { titulo: "La luz del pasillo con puertas básicas", enunciado: "La luz se enciende cuando los dos interruptores están en posiciones distintas: S = Ā · B + A · B̄.",
+      entradas: ["A", "B"], significados: { A: "el interruptor A tiene la palanca arriba", B: "el interruptor B tiene la palanca arriba", S: "la luz está encendida" },
+      puertas: [{ id: "NA", tipo: "NOT", de: ["A"] }, { id: "NB", tipo: "NOT", de: ["B"] },
+                { id: "T1", tipo: "AND", de: ["NA", "B"] }, { id: "T2", tipo: "AND", de: ["A", "NB"] }, { id: "G1", tipo: "OR", de: ["T1", "T2"] }], salidas: { S: "G1" } },
+    jueces: { titulo: "La votación de tres jueces", enunciado: "Un ejercicio es válido si al menos dos de los tres jueces lo aprueban.",
+      entradas: ["A", "B", "C"], significados: { A: "el juez A aprueba", B: "el juez B aprueba", C: "el juez C aprueba", S: "el ejercicio es válido" },
+      puertas: [{ id: "T1", tipo: "AND", de: ["A", "B"] }, { id: "T2", tipo: "AND", de: ["A", "C"] }, { id: "T3", tipo: "AND", de: ["B", "C"] },
+                { id: "G1", tipo: "OR", de: ["T1", "T2", "T3"] }], salidas: { S: "G1" } }
+  };
+
+  // segmentos a b c d e f g de cada cifra 0-F (los del material de 2º TECI)
+  var HEX7 = ["1111110", "0110000", "1101101", "1111001", "0110011", "1011011", "1011111", "1110000",
+              "1111111", "1111011", "1110111", "0011111", "1001110", "0111101", "1001111", "1000111"];
+
+  // ------------------------------------------------------------------ configuración
+  function leerConfig() {
+    var fuentes = [window.name || "", (location.hash || "").slice(1), (location.search || "").slice(1)], cfg = {};
+    for (var f = fuentes.length - 1; f >= 0; f--) fuentes[f].split(/[;&]/).forEach(function (par) {
+      var i = par.indexOf("="); if (i > 0) cfg[decodeURIComponent(par.slice(0, i)).trim()] = decodeURIComponent(par.slice(i + 1)).trim(); });
+    var todas = ["NOT", "AND", "OR", "NAND", "NOR", "XOR", "XNOR"];
+    var paleta = (cfg.puertas ? cfg.puertas.toUpperCase().split(",") : ["NOT", "AND", "OR", "NAND", "NOR", "XOR"])
+      .map(function (x) { return x.trim(); }).filter(function (x) { return todas.indexOf(x) >= 0; });
+    var modo = ["ver", "predecir", "montar"].indexOf(cfg.modo) >= 0 ? cfg.modo : (cfg.escena ? "ver" : "montar");
+    var display = cfg.display === "si";
+    var sal = display ? ["a", "b", "c", "d", "e", "f", "g"] :
+      (cfg.salidas || "S").split(",").map(function (x) { return x.trim(); }).filter(function (x) { return /^[A-Za-z]\w{0,3}$/.test(x); });
+    if (!sal.length) sal = ["S"];
+    var objetivo2 = cfg.objetivo === "hex7seg" && display ? "hex7seg" : (/^[01?xX]+$/.test(cfg.objetivo || "") ? cfg.objetivo : null);
+    var ent = (cfg.entradas || (display ? "A,B,C,D" : "A,B")).toUpperCase().split(",").map(function (x) { return x.trim(); }).filter(function (x) { return /^[A-Z]\d*$/.test(x); });
+    return { modo: modo, escena: ESCENAS[cfg.escena] ? cfg.escena : "alarma2", paleta: paleta.length ? paleta : ["NOT", "AND", "OR"],
+             maxent: Math.min(4, Math.max(2, parseInt(cfg.maxent || "3", 10) || 3)), entradas: ent.length ? ent.slice(0, 4) : ["A", "B"],
+             objetivo: objetivo2, display: display, salidas: sal,
+             mEnlace: /(^|[&;])m=/.test((location.hash || "").slice(1)) || /(^|[&;])m=/.test((location.search || "").slice(1)),
+             compacto: cfg.compacto === "si" || display || parseInt(cfg.maxpuertas || "14", 10) > 20,
+             maxpuertas: Math.min(40, Math.max(4, parseInt(cfg.maxpuertas || "14", 10) || 14)), id: (cfg.id || "banco").replace(/[^\w-]/g, ""), m: cfg.m || null, raw: cfg };
+  }
+  var CFG = leerConfig();
+  var MONTAR = CFG.modo === "montar";
+
+  // ------------------------------------------------------------------ estado
+  var est = {
+    c: null,               // circuito {entradas, significados, puertas, salidas}
+    v: {},                 // valores de las entradas
+    sel: null,             // pin de origen seleccionado (nombre de señal)
+    predecir: CFG.modo === "predecir", resueltas: {}, fallos: 0, revelada: false,
+    obj: null,             // tabla objetivo del alumno: array de 0/1/null
+    historial: [], comparada: false, verInter: false, zoom: 1, zoomAuto: true
+  };
+  function clonar(x) { return JSON.parse(JSON.stringify(x)); }
+  function nuevoId() { var n = 1; while (est.c.puertas.some(function (g) { return g.id === "G" + n; })) n++; return "G" + n; }
+
+  function iniciar() {
+    if (MONTAR) {
+      // Prioridad: enlace abierto (#m=…) > lo guardado por el alumno en este navegador > montaje de partida (name) > vacío
+      var desdeEnlace = null, partida = null, guardado = null;
+      if (CFG.m) { try { var mm = L.decodificarMontaje(CFG.m); if (CFG.mEnlace) desdeEnlace = mm; else partida = mm; } catch (e) { aviso("mal", e.message); } }
+      if (!desdeEnlace) { try { var g = localStorage.getItem("banco:" + CFG.id); if (g) guardado = L.decodificarMontaje(g); } catch (e) { guardado = null; } }
+      est.partida = partida;
+      est.c = desdeEnlace || guardado || (partida ? clonar(partida) : null) || montajeVacio();
+      est.obj = null; ajustarObjetivo();
+      if (CFG.objetivo === "hex7seg" && est.c.entradas.length === 4) {
+        "abcdefg".split("").forEach(function (s, j) { if (est.obj[s]) est.obj[s] = HEX7.map(function (cod) { return +cod[j]; }); });
+      } else if (CFG.objetivo && est.obj[CFG.salidas[0]] && CFG.objetivo.length === est.obj[CFG.salidas[0]].length) {
+        est.obj[CFG.salidas[0]] = CFG.objetivo.split("").map(function (x) { return x === "?" ? null : (x === "x" || x === "X") ? "x" : +x; });
+      }
+      if (desdeEnlace) aviso("ok", "Montaje abierto desde el enlace.");
+      else if (guardado) aviso("", "Se ha recuperado tu último montaje en este navegador.");
+      else aviso("", "Añade puertas con los botones de arriba y conéctalas: pulsa primero de dónde sale la señal y después a qué entrada va.");
+    } else {
+      var e = ESCENAS[CFG.escena];
+      est.c = clonar({ entradas: e.entradas, significados: e.significados, puertas: e.puertas, salidas: e.salidas });
+    }
+    est.c.entradas.forEach(function (x) { est.v[x] = 0; });
+    ajustarObjetivo();
+  }
+  function montajeVacio() {
+    var s = {}; CFG.salidas.forEach(function (x) { s[x] = null; });
+    return { entradas: CFG.entradas.slice(), significados: {}, puertas: [], salidas: s };
+  }
+  function ajustarObjetivo() {      // una columna «Mi tabla» por salida: null sin rellenar, 0, 1, "x" da igual
+    var n = 1 << est.c.entradas.length, nuevo = {};
+    Object.keys(est.c.salidas).forEach(function (s) {
+      nuevo[s] = est.obj && est.obj[s] && est.obj[s].length === n ? est.obj[s] : new Array(n).fill(null);
+    });
+    est.obj = nuevo;
+  }
+  function guardar() {
+    if (!MONTAR) return;
+    try { localStorage.setItem("banco:" + CFG.id, L.codificarMontaje(est.c)); } catch (e) { /* sin almacenamiento: no pasa nada */ }
+  }
+  function cambio(fn) {          // toda modificación del montaje pasa por aquí (deshacer + guardado)
+    est.historial.push(clonar(est.c)); if (est.historial.length > 60) est.historial.shift();
+    fn(); est.sel = null; est.comparada = false;
+    est.c.entradas.forEach(function (x) { if (est.v[x] === undefined) est.v[x] = 0; });
+    Object.keys(est.v).forEach(function (x) { if (est.c.entradas.indexOf(x) < 0) delete est.v[x]; });
+    ajustarObjetivo(); guardar(); pintar();
+  }
+
+  // ------------------------------------------------------------------ evaluación parcial (vale con el circuito a medias)
+  function evaluarParcial() {
+    var val = {}, porId = {}, hecho = true;
+    est.c.entradas.forEach(function (e) { val[e] = est.v[e]; });
+    est.c.puertas.forEach(function (g) { porId[g.id] = g; });
+    var cambiado = true, vueltas = 0;
+    while (cambiado && vueltas++ < 50) {
+      cambiado = false;
+      est.c.puertas.forEach(function (g) {
+        if (val[g.id] !== undefined) return;
+        var ins = g.de.map(function (r) { return r ? val[r] : undefined; });
+        if (ins.every(function (x) { return x === 0 || x === 1; })) { val[g.id] = L.evaluarPuerta(g.tipo, ins); cambiado = true; }
+      });
+    }
+    return val;
+  }
+  function filaActual() { return parseInt(est.c.entradas.map(function (e) { return est.v[e]; }).join("") || "0", 2); }
+  function nombreSalida() { return Object.keys(est.c.salidas)[0]; }
+  function salidaVisible() {
+    if (!est.predecir) return true;
+    return est.revelada || est.resueltas[filaActual()] !== undefined;
+  }
+
+  // ------------------------------------------------------------------ dibujo
+  function txt(x, y, t, size, color, anchor, weight, extra) {
+    return '<text x="' + x + '" y="' + y + '" font-size="' + (size || 16) + '" fill="' + (color || "#1d2733") + '" text-anchor="' + (anchor || "start") +
+      '" font-weight="' + (weight || "normal") + '" font-family="' + FUENTE + '"' + (extra || "") + ">" + t + "</text>";
+  }
+  function geometria(g, p) {   // patillas a 40 px: las zonas de pulsación no se solapan
+    var n = g.de.length, paso = CFG.compacto ? 24 : 40, h = n === 1 ? (CFG.compacto ? 44 : 60) : paso * (n + 1), w = 64, x = p.x - w / 2, y = p.y - h / 2;
+    var ins = [], i;
+    for (i = 0; i < n; i++) ins.push({ x: x - 22, y: y + h * (i + 1) / (n + 1) });
+    var outX = x + w + (g.tipo === "NOT" || g.tipo === "NAND" || g.tipo === "NOR" || g.tipo === "XNOR" ? 14 : 0) + 22;
+    return { x: x, y: y, w: w, h: h, ins: ins, out: { x: outX, y: p.y } };
+  }
+  function cuerpo(g, G) {
+    var c = 'fill="#ffffff" stroke="' + ACENTO + '" stroke-width="3.5"', x = G.x, y = G.y, w = G.w, h = G.h, s = "";
+    if (g.tipo === "NOT") s = '<polygon points="' + x + "," + (y + 6) + " " + x + "," + (y + h - 6) + " " + (x + w) + "," + (y + h / 2) + '" ' + c + "/>";
+    else if (g.tipo === "AND" || g.tipo === "NAND") s = '<path d="M' + x + "," + y + " H" + (x + w - h / 2) + " A" + (h / 2) + "," + (h / 2) + " 0 0 1 " + (x + w - h / 2) + "," + (y + h) + " H" + x + ' Z" ' + c + "/>";
+    else {
+      s = '<path d="M' + x + "," + y + " Q" + (x + w * .7) + "," + y + " " + (x + w) + "," + (y + h / 2) + " Q" + (x + w * .7) + "," + (y + h) + " " + x + "," + (y + h) + " Q" + (x + 16) + "," + (y + h / 2) + " " + x + "," + y + ' Z" ' + c + "/>";
+      if (g.tipo === "XOR" || g.tipo === "XNOR") s = '<path d="M' + (x - 9) + "," + y + " Q" + (x + 7) + "," + (y + h / 2) + " " + (x - 9) + "," + (y + h) + '" fill="none" stroke="' + ACENTO + '" stroke-width="3.5"/>' + s;
+    }
+    if (g.tipo === "NOT" || g.tipo === "NAND" || g.tipo === "NOR" || g.tipo === "XNOR") s += '<circle cx="' + (x + w + 7) + '" cy="' + (y + h / 2) + '" r="7" ' + c + "/>";
+    // patillas cortas entre el pin y el cuerpo
+    G.ins.forEach(function (p) { s += '<line x1="' + p.x + '" y1="' + p.y + '" x2="' + (x + (g.tipo === "OR" || g.tipo === "NOR" || g.tipo === "XOR" || g.tipo === "XNOR" ? 10 : 0)) + '" y2="' + p.y + '" stroke="' + ACENTO + '" stroke-width="2.5"/>'; });
+    s += '<line x1="' + (G.out.x - 22) + '" y1="' + G.out.y + '" x2="' + G.out.x + '" y2="' + G.out.y + '" stroke="' + ACENTO + '" stroke-width="2.5"/>';
+    return s;
+  }
+  function trazo(puntos, v) {
+    var d = puntos.map(function (p, i) { return (i ? "L" : "M") + p[0] + "," + p[1]; }).join(" ");
+    var color = v === 1 ? C1 : v === 0 ? C0 : CX;
+    return '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="' + (v === 1 ? 5 : 3.5) + '"' +
+      (v === 1 ? "" : v === 0 ? ' stroke-dasharray="8 6"' : ' stroke-dasharray="2 6"') + ' stroke-linejoin="round" stroke-linecap="round"/>';
+  }
+  function pinSvg(id, x, y, etiqueta, origen) {
+    var sel = est.sel === id ? " sel" : "";
+    return '<g class="pin' + sel + '" data-pin="' + id + '" data-origen="' + (origen ? 1 : 0) + '" role="button" tabindex="0" aria-label="' + etiqueta + '">' +
+      '<circle cx="' + x + '" cy="' + y + '" r="' + (CFG.compacto ? 12 : 20) + '" fill="transparent"/><circle class="aro" cx="' + x + '" cy="' + y + '" r="8"/></g>';
+  }
+  function dibujar(val) {
+    var lay = L.disponer(est.c, { columna: CFG.compacto ? 180 : 210, fila: CFG.compacto ? 60 : 100, x0: 80, y0: CFG.compacto ? 70 : 100,
+      margen: CFG.compacto ? 18 : 34, alto: function (g) { return geometria(g, { x: 0, y: 0 }).h; }, filaSalida: Object.keys(est.c.salidas).length > 2 ? 56 : 70 });
+    var pos = lay.pos, G = {}, svg = "", pins = "", ver = salidaVisible();
+    est.c.puertas.forEach(function (g) { G[g.id] = geometria(g, pos[g.id]); });
+    function puntoSalida(r) {
+      if (est.c.entradas.indexOf(r) >= 0) return { x: pos[r].x + 52, y: pos[r].y };
+      return G[r] ? G[r].out : null;
+    }
+    function valorVisible(r) {
+      if (!est.predecir || ver) return val[r];
+      return est.c.entradas.indexOf(r) >= 0 ? val[r] : undefined;   // en modo predecir solo se ven las entradas
+    }
+    // cables
+    est.c.puertas.forEach(function (g) {
+      g.de.forEach(function (r, i) {
+        if (!r) return; var a = puntoSalida(r), b = G[g.id].ins[i]; if (!a) return;
+        var mx = b.x - 16 - 8 * i;
+        svg += trazo([[a.x, a.y], [mx, a.y], [mx, b.y], [b.x, b.y]], valorVisible(r));
+      });
+    });
+    Object.keys(est.c.salidas).forEach(function (s) {
+      var r = est.c.salidas[s], p = pos["salida:" + s]; if (!r) return; var a = puntoSalida(r); if (!a) return;
+      svg += trazo([[a.x, a.y], [p.x - 30, a.y], [p.x - 30, p.y], [p.x - 24, p.y]], valorVisible(r));
+    });
+    // entradas: interruptor pulsable + pin de origen
+    est.c.entradas.forEach(function (e) {
+      var p = pos[e], v = est.v[e];
+      svg += '<g class="tog" data-entrada="' + e + '" role="button" tabindex="0" aria-pressed="' + (v ? "true" : "false") +
+        '" aria-label="Entrada ' + e + ': vale ' + v + '. Pulsa para cambiarla.">' +
+        txt(p.x - 60, p.y + 7, e, 20, "#1d2733", "start", "bold") +
+        '<rect class="tog-caja" x="' + (p.x - 34) + '" y="' + (p.y - 21) + '" width="44" height="42" rx="8" fill="' + (v ? "#fff1e6" : "#fff") + '" stroke="' + (v ? C1 : C0) + '" stroke-width="3"/>' +
+        txt(p.x - 12, p.y + 8, String(v), 22, "#1d2733", "middle", "bold") + "</g>";
+      svg += '<line x1="' + (p.x + 10) + '" y1="' + p.y + '" x2="' + (p.x + 52) + '" y2="' + p.y + '" stroke="' + (v ? C1 : C0) + '" stroke-width="' + (v ? 5 : 3.5) + '"/>';
+      if (MONTAR) pins += pinSvg(e, p.x + 52, p.y, "Origen: entrada " + e, true);
+    });
+    // puertas
+    est.c.puertas.forEach(function (g) {
+      var Gm = G[g.id], vv = valorVisible(g.id);
+      svg += cuerpo(g, Gm);
+      svg += txt(Gm.x + Gm.w / 2 - 6, Gm.y - 8, g.id + " · " + g.tipo, 13, "#4b5866", "middle");
+      svg += txt(Gm.out.x + 4, Gm.out.y - 10, vv === undefined ? "?" : String(vv), 18, vv === 1 ? C1 : "#1d2733", "start", "bold");
+      if (MONTAR) {
+        Gm.ins.forEach(function (pi, i) { pins += pinSvg(g.id + ":" + i, pi.x, pi.y, "Destino: entrada " + (i + 1) + " de la puerta " + g.id + " " + g.tipo, false); });
+        pins += pinSvg(g.id, Gm.out.x, Gm.out.y, "Origen: salida de la puerta " + g.id + " " + g.tipo, true);
+      }
+    });
+    // salidas: lámpara
+    Object.keys(est.c.salidas).forEach(function (s) {
+      var p = pos["salida:" + s], r = est.c.salidas[s], v = r ? val[r] : undefined, mostrar = r && ver && (v === 0 || v === 1);
+      svg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="22" fill="' + (mostrar && v ? "#ffd27a" : "#e9edf1") + '" stroke="' + (mostrar && v ? C1 : C0) + '" stroke-width="3"' + (mostrar ? "" : ' stroke-dasharray="5 4"') + "/>";
+      svg += txt(p.x, p.y + 7, mostrar ? String(v) : "?", 20, "#1d2733", "middle", "bold");
+      svg += txt(p.x + 30, p.y + 7, s, 20, "#1d2733", "start", "bold");
+      if (MONTAR) pins += pinSvg("salida:" + s, p.x - 24, p.y, "Destino: salida " + s, false);
+    });
+    var extra = 0;
+    if (CFG.display || ["a", "b", "c", "d", "e", "f", "g"].every(function (k) { return est.c.salidas[k] !== undefined; })) {
+      var ps = ["a", "b", "c", "d", "e", "f", "g"].map(function (k) { return pos["salida:" + k]; });
+      var dx = ps[0].x + 90, cy = ps.reduce(function (m, p) { return m + p.y; }, 0) / 7, dy = cy - 95, W = 70, H = 190, T = 14;
+      var SEG = { a: [dx + T, dy, W - 2 * T, T], b: [dx + W - T, dy + T, T, H / 2 - T * 1.5], c: [dx + W - T, dy + H / 2 + T / 2, T, H / 2 - T * 1.5],
+                  d: [dx + T, dy + H - T, W - 2 * T, T], e: [dx, dy + H / 2 + T / 2, T, H / 2 - T * 1.5], f: [dx, dy + T, T, H / 2 - T * 1.5], g: [dx + T, dy + H / 2 - T / 2, W - 2 * T, T] };
+      svg += '<rect x="' + (dx - 16) + '" y="' + (dy - 16) + '" width="' + (W + 32) + '" height="' + (H + 32) + '" rx="10" fill="#1d2733"/>';
+      Object.keys(SEG).forEach(function (k) {
+        var r = est.c.salidas[k], v = r ? val[r] : undefined, on = ver && v === 1, s = SEG[k];
+        svg += '<rect x="' + s[0] + '" y="' + s[1] + '" width="' + s[2] + '" height="' + s[3] + '" rx="4" fill="' + (on ? "#ffb347" : "#3a4654") + '"/>';
+      });
+      svg += txt(dx + W / 2, dy + H + 40, "display", 13, "#4b5866", "middle");
+      extra = 150;
+    }
+    var ancho = Math.max(lay.ancho + 40 + extra, 420), alto = Math.max(lay.alto + 10, 150, extra ? 330 : 0);
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + Math.round(ancho * est.zoom) + '" height="' + Math.round(alto * est.zoom) + '" viewBox="0 0 ' + ancho + " " + alto + '" data-w="' + ancho + '">' +
+      '<rect width="100%" height="100%" fill="#ffffff"/>' + svg + pins + "</svg>";
+  }
+
+  // ------------------------------------------------------------------ interacción en el esquema
+  function esOrigen(id) { return est.c.entradas.indexOf(id) >= 0 || est.c.puertas.some(function (g) { return g.id === id; }); }
+  function conectar(origen, destino) {
+    if (destino.indexOf("salida:") === 0) {
+      var s = destino.slice(7);
+      cambio(function () { est.c.salidas[s] = origen; });
+      aviso("ok", "Conectado: " + origen + " → salida " + s + "."); return;
+    }
+    var partes = destino.split(":"), g = est.c.puertas.filter(function (x) { return x.id === partes[0]; })[0], i = +partes[1];
+    if (!g) return;
+    if (g.id === origen) { aviso("mal", "Una puerta no puede recibir su propia salida."); est.sel = null; pintar(); return; }
+    cambio(function () { g.de[i] = origen; });
+    aviso("ok", "Conectado: " + origen + " → entrada " + (i + 1) + " de " + g.id + ".");
+  }
+  function pulsarPin(id, origen) {
+    if (origen) {
+      est.sel = est.sel === id ? null : id; pintar(true);
+      if (est.sel) aviso("", "Origen elegido: " + id + ". Ahora pulsa la entrada de una puerta o la salida a la que va.");
+      else aviso("", "Selección anulada.");
+      enfocar('[data-pin="' + id + '"]');
+    } else if (est.sel) {
+      var o = est.sel; conectar(o, id); enfocar('[data-pin="' + id + '"]');
+    } else if (desconectar(id)) {
+    } else aviso("", "Primero pulsa de dónde viene la señal: una entrada (a la izquierda) o la salida de una puerta.");
+  }
+  function desconectar(destino) {   // quita el cable que llega a un destino ya conectado
+    if (destino.indexOf("salida:") === 0) {
+      var s = destino.slice(7); if (!est.c.salidas[s]) return false;
+      cambio(function () { est.c.salidas[s] = null; }); aviso("", "Cable quitado de la salida " + s + "."); return true;
+    }
+    var p = destino.split(":"), g = est.c.puertas.filter(function (x) { return x.id === p[0]; })[0];
+    if (!g || !g.de[+p[1]]) return false;
+    cambio(function () { g.de[+p[1]] = null; }); aviso("", "Cable quitado de la entrada " + (+p[1] + 1) + " de " + g.id + "."); return true;
+  }
+  function enfocar(sel) { var el = document.querySelector(sel); if (el) el.focus(); }
+  $("lienzo").addEventListener("click", function (ev) {
+    var t = ev.target.closest ? ev.target : null; if (!t) return;
+    var tog = t.closest("[data-entrada]"), pin = t.closest("[data-pin]");
+    if (pin) { pulsarPin(pin.getAttribute("data-pin"), pin.getAttribute("data-origen") === "1"); return; }
+    if (tog) { var e = tog.getAttribute("data-entrada"); est.v[e] = 1 - est.v[e]; nuevaCombinacion(); enfocar('[data-entrada="' + e + '"]'); }
+  });
+  $("lienzo").addEventListener("keydown", function (ev) {
+    if (ev.key !== "Enter" && ev.key !== " ") return;
+    var t = ev.target, pin = t.closest && t.closest("[data-pin]"), tog = t.closest && t.closest("[data-entrada]");
+    if (pin || tog) { ev.preventDefault(); t.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
+  });
+
+  // ------------------------------------------------------------------ listas accesibles (montar)
+  function pintarListas(diag) {
+    if (!MONTAR) return;
+    var sig = est.c.significados || {};
+    $("lista-entradas").innerHTML = est.c.entradas.map(function (e, i) {
+      return '<li><span class="nom">Entrada</span><label>Letra <input type="text" size="3" maxlength="3" data-renombrar="' + i + '" value="' + e + '" aria-label="Letra de la entrada ' + e + '"></label>' +
+        '<label>1 significa: <input type="text" size="28" data-sig="' + e + '" value="' + (sig[e] || "").replace(/"/g, "&quot;") + '" aria-label="Qué significa el 1 de ' + e + '"></label></li>';
+    }).join("");
+    $("t-puertas").classList.toggle("oculto", !est.c.puertas.length);
+    $("lista-puertas").innerHTML = est.c.puertas.map(function (g) {
+      return '<li><span class="nom">' + g.id + " · " + g.tipo + "</span>" +
+      (g.tipo !== "NOT" ? '<button type="button" data-mas="' + g.id + '" aria-label="Añadir una entrada a ' + g.id + '"' + (g.de.length >= CFG.maxent ? " disabled" : "") + ">+1 entrada</button>" +
+        '<button type="button" data-menos="' + g.id + '" aria-label="Quitar una entrada a ' + g.id + '"' + (g.de.length <= 2 ? " disabled" : "") + ">−1 entrada</button>" : "") +
+      '<button type="button" data-borrar="' + g.id + '">Quitar ' + g.id + "</button></li>";
+    }).join("");
+    $("lista-salidas").innerHTML = Object.keys(est.c.salidas).map(function (s) {
+      return '<li><span class="nom">Salida ' + s + '</span>' +
+        '<label>1 significa: <input type="text" size="28" data-sig="' + s + '" value="' + ((sig[s] || "").replace(/"/g, "&quot;")) + '" aria-label="Qué significa el 1 de ' + s + '"></label></li>';
+    }).join("");
+    var h = "";
+    if (diag.problemas.length) h += '<p><strong>Falta para poder probarlo:</strong></p><ul>' + diag.problemas.map(function (p) { return '<li class="prob">' + p + "</li>"; }).join("") + "</ul>";
+    if (diag.avisos.length) h += '<p><strong>Revisa:</strong></p><ul>' + diag.avisos.map(function (p) { return '<li class="av">' + p + "</li>"; }).join("") + "</ul>";
+    if (!h) h = '<p class="leyenda">El circuito está completo.</p>';
+    $("diag").innerHTML = h;
+  }
+  $("caja-conex").addEventListener("change", function (ev) {
+    var t = ev.target;
+    if (t.hasAttribute("data-sig")) { est.c.significados = est.c.significados || {}; est.c.significados[t.getAttribute("data-sig")] = t.value.slice(0, 80); guardar(); }
+    else if (t.hasAttribute("data-renombrar")) renombrar(+t.getAttribute("data-renombrar"), t.value);
+  });
+  $("caja-conex").addEventListener("click", function (ev) {
+    var t = ev.target.closest("button"); if (!t) return;
+    if (t.hasAttribute("data-borrar")) {
+      var id = t.getAttribute("data-borrar");
+      cambio(function () {
+        est.c.puertas = est.c.puertas.filter(function (g) { return g.id !== id; });
+        est.c.puertas.forEach(function (g) { g.de = g.de.map(function (r) { return r === id ? null : r; }); });
+        Object.keys(est.c.salidas).forEach(function (s) { if (est.c.salidas[s] === id) est.c.salidas[s] = null; });
+      });
+      aviso("", "Puerta " + id + " quitada.");
+    } else if (t.hasAttribute("data-mas")) { var g1 = est.c.puertas.filter(function (x) { return x.id === t.getAttribute("data-mas"); })[0]; if (g1.de.length < CFG.maxent) cambio(function () { g1.de.push(null); }); }
+    else if (t.hasAttribute("data-menos")) { var g2 = est.c.puertas.filter(function (x) { return x.id === t.getAttribute("data-menos"); })[0]; if (g2.de.length > 2) cambio(function () { g2.de.pop(); }); }
+  });
+  function renombrar(i, nuevo) {
+    nuevo = (nuevo || "").toUpperCase().trim(); var viejo = est.c.entradas[i];
+    if (nuevo === viejo) return;
+    if (!/^[A-Z]\d?$/.test(nuevo) || nuevo === "S" || nuevo === "G" || est.c.salidas[nuevo] !== undefined || est.c.entradas.indexOf(nuevo) >= 0 || est.c.puertas.some(function (g) { return g.id === nuevo; })) {
+      aviso("mal", "La entrada se llama con una letra mayúscula (y, si hace falta, un número) que no esté ya usada. La S está reservada para la salida."); pintar(); return;
+    }
+    cambio(function () {
+      est.c.entradas[i] = nuevo; est.v[nuevo] = est.v[viejo] || 0;
+      est.c.puertas.forEach(function (g) { g.de = g.de.map(function (r) { return r === viejo ? nuevo : r; }); });
+      Object.keys(est.c.salidas).forEach(function (s) { if (est.c.salidas[s] === viejo) est.c.salidas[s] = nuevo; });
+      if (est.c.significados && est.c.significados[viejo] !== undefined) { est.c.significados[nuevo] = est.c.significados[viejo]; delete est.c.significados[viejo]; }
+    });
+    aviso("ok", "La entrada " + viejo + " ahora se llama " + nuevo + ".");
+  }
+
+  // ------------------------------------------------------------------ tabla de verdad
+  function pintarTabla(diag) {
+    var cont = $("tabla"), es = est.c.entradas, sal = Object.keys(est.c.salidas);
+    if (!diag.completo) { cont.innerHTML = ""; $("tabla-ayuda").textContent = "La tabla aparecerá cuando el circuito esté completo."; $("fila-comparar").classList.add("oculto"); return; }
+    var finales = sal.map(function (s) { return est.c.salidas[s]; });
+    var inter = est.verInter ? est.c.puertas.filter(function (g) { return finales.indexOf(g.id) < 0; }) : [];
+    var actual = filaActual(), h = "<table><thead><tr>" + es.map(function (e) { return '<th scope="col">' + e + "</th>"; }).join("") +
+      inter.map(function (g) { return '<th scope="col">' + g.id + "</th>"; }).join("") + sal.map(function (s) { return '<th scope="col">' + s + "</th>"; }).join("") +
+      (MONTAR ? sal.map(function (s) { return '<th scope="col">Mi ' + s + "</th>"; }).join("") : "") + "</tr></thead><tbody>";
+    L.combinaciones(es.length).forEach(function (c, k) {
+      var v = {}; es.forEach(function (e, i) { v[e] = c[i]; });
+      var r = L.evaluarCircuito(est.c, v), mostrar = !est.predecir || est.resueltas[k] !== undefined || (k === actual && salidaVisible());
+      h += "<tr" + (k === actual ? ' class="actual" aria-current="true"' : "") + ">" +
+        c.map(function (x, i) { return "<td>" + (i === 0 ? '<button type="button" data-fila="' + k + '" aria-label="Probar ' + es.map(function (e, j) { return e + " = " + c[j]; }).join(", ") + '">' + x + "</button>" : x) + "</td>"; }).join("") +
+        inter.map(function (g) { return '<td class="inter">' + (mostrar ? r.senales[g.id] : "?") + "</td>"; }).join("") +
+        sal.map(function (s) { return '<td class="s">' + (mostrar ? r.salidas[s] : "?") + "</td>"; }).join("") +
+        (MONTAR ? sal.map(function (s) {
+          var o = est.obj[s][k], cls = "";
+          if (est.comparada && o !== null && o !== "x") cls = o === r.salidas[s] ? " bien" : " malc";
+          var t = o === null ? "·" : o === "x" ? "X" : o;
+          return '<td class="obj' + cls + '"><button type="button" data-obj="' + k + '" data-s="' + s + '" aria-label="Mi tabla, salida ' + s + ", fila " + (k + 1) + ": " +
+            (o === null ? "sin rellenar" : o === "x" ? "da igual" : o) + '. Pulsa para cambiar.">' + t + "</button></td>";
+        }).join("") : "") + "</tr>";
+    });
+    cont.innerHTML = h + "</tbody></table>";
+    $("tabla-ayuda").textContent = MONTAR ? "Pulsa una fila para probar esa combinación. En «Mi» escribe lo que debería hacer tu circuito (pulsa para cambiar · → 0 → 1 → X, donde X significa «da igual») y compara." : "Pulsa una fila para probar esa combinación.";
+    $("fila-comparar").classList.toggle("oculto", !MONTAR);
+  }
+  $("tabla").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button"); if (!b) return;
+    if (b.hasAttribute("data-fila")) {
+      var k = +b.getAttribute("data-fila"), c = L.combinaciones(est.c.entradas.length)[k];
+      est.c.entradas.forEach(function (e, i) { est.v[e] = c[i]; }); nuevaCombinacion(); enfocar('[data-fila="' + k + '"]');
+    } else if (b.hasAttribute("data-obj")) {
+      var j = +b.getAttribute("data-obj"), sn = b.getAttribute("data-s"), o = est.obj[sn][j];
+      est.obj[sn][j] = o === null ? 0 : o === 0 ? 1 : o === 1 ? "x" : null; est.comparada = false; pintar();
+      enfocar('[data-obj="' + j + '"][data-s="' + sn + '"]');
+    }
+  });
+  $("comparar").addEventListener("click", function () {
+    var sal = Object.keys(est.c.salidas), es = est.c.entradas, vacias = 0, mal = [];
+    L.combinaciones(es.length).forEach(function (c, k) {
+      var v = {}; es.forEach(function (e, i) { v[e] = c[i]; });
+      var r = L.evaluarCircuito(est.c, v);
+      sal.forEach(function (s) {
+        var o = est.obj[s][k];
+        if (o === null) { vacias++; return; }
+        if (o !== "x" && r.salidas[s] !== o) mal.push(s + " en " + c.join(""));
+      });
+    });
+    est.comparada = true; pintar();
+    var total = (1 << es.length);
+    if (vacias) aviso("mal", (vacias === 1 ? "Te falta 1 casilla de tu tabla por rellenar (usa X si da igual). Compara cuando esté completa." : "Te faltan " + vacias + " casillas de tu tabla por rellenar (usa X si da igual). Compara cuando estén todas."));
+    else if (!mal.length) aviso("ok", "El circuito hace exactamente lo que dice tu tabla en las " + total + " combinaciones" + (sal.length > 1 ? " y en sus " + sal.length + " salidas." : "."));
+    else aviso("mal", "El circuito no coincide con tu tabla en " + mal.length + (mal.length > 1 ? " casillas: " : " casilla: ") + mal.slice(0, 12).join("; ") + (mal.length > 12 ? "…" : "") + ". Revisa esas filas en el circuito (o en tu tabla).");
+  });
+  $("limpiar-obj").addEventListener("click", function () { est.obj = null; ajustarObjetivo(); est.comparada = false; pintar(); });
+  $("ver-inter").addEventListener("change", function () { est.verInter = this.checked; pintar(); });
+
+  // ------------------------------------------------------------------ paso a paso y predicción
+  function nombreSenal(r) { return r; }
+  function pasoAPaso(val, diag) {
+    var ol = $("pasos");
+    if (!diag.completo) { ol.innerHTML = '<li class="leyenda">Cuando el circuito esté completo, aquí verás cómo se calcula cada puerta.</li>'; return; }
+    var r = L.evaluarCircuito(est.c, est.v), s = nombreSalida(), ver = salidaVisible();
+    ol.innerHTML = r.orden.map(function (id) {
+      var g = est.c.puertas.filter(function (x) { return x.id === id; })[0];
+      var nombre = Object.keys(est.c.salidas).filter(function (k) { return est.c.salidas[k] === id; })[0] || id;
+      if (est.predecir && !ver) return "<li>" + nombre + " = ? (predice primero)</li>";
+      return "<li>" + L.explicarPuerta(g.tipo, g.de.map(function (x) { return r.senales[x]; }), g.de.map(nombreSenal), nombre) + "</li>";
+    }).join("");
+  }
+  function nuevaCombinacion() {
+    est.fallos = 0; est.revelada = false; pintar();
+    if (est.predecir) {
+      var k = filaActual();
+      aviso("", est.resueltas[k] !== undefined ? "Esta combinación ya la has comprobado." : "¿Cuánto vale " + nombreSalida() + " con " + est.c.entradas.map(function (e) { return e + " = " + est.v[e]; }).join(", ") + "?");
+    }
+  }
+  function predecir(p) {
+    var d = L.diagnosticar(est.c); if (!d.completo || salidaVisible()) return;
+    var s = nombreSalida(), r = L.evaluarCircuito(est.c, est.v).salidas[s];
+    if (p === r) { est.resueltas[filaActual()] = true; aviso("ok", "Correcto: " + s + " = " + r + ". Mira el paso a paso para ver por qué."); }
+    else if (est.fallos === 0) { est.fallos = 1; aviso("mal", "Todavía no. Pista: calcula primero las puertas de la izquierda y sigue el camino hasta " + s + ". Vuelve a intentarlo."); }
+    else { est.resueltas[filaActual()] = false; aviso("mal", "No era " + p + ": " + s + " = " + r + ". Repasa el paso a paso."); }
+    pintar();
+    var total = 1 << est.c.entradas.length, hechas = Object.keys(est.resueltas).length;
+    if (hechas === total && est.fallos !== 1) $("aviso").textContent += " Has comprobado las " + total + " combinaciones.";
+  }
+  $("p0").addEventListener("click", function () { predecir(0); });
+  $("p1").addEventListener("click", function () { predecir(1); });
+  function modoVer(pred) {
+    est.predecir = pred; est.resueltas = {}; est.fallos = 0; est.revelada = false;
+    $("m-ver").setAttribute("aria-pressed", pred ? "false" : "true"); $("m-predecir").setAttribute("aria-pressed", pred ? "true" : "false");
+    pintar(); nuevaCombinacion(); if (!pred) aviso("", "Cambia las entradas y mira cómo se propaga la señal por cada cable.");
+  }
+  $("m-ver").addEventListener("click", function () { modoVer(false); });
+  $("m-predecir").addEventListener("click", function () { modoVer(true); });
+
+  // ------------------------------------------------------------------ barra de montar
+  function pintarPaleta() {
+    $("paleta").innerHTML = '<span>Añadir puerta:</span>' + CFG.paleta.map(function (t) { return '<button type="button" data-nueva="' + t + '">' + t + "</button>"; }).join("");
+  }
+  $("paleta").addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-nueva]"); if (!b) return;
+    if (est.c.puertas.length >= CFG.maxpuertas) { aviso("mal", "Has llegado al máximo de puertas del banco (" + CFG.maxpuertas + ")."); return; }
+    var t = b.getAttribute("data-nueva"), id = nuevoId();
+    cambio(function () { est.c.puertas.push({ id: id, tipo: t, de: t === "NOT" ? [null] : [null, null] }); });
+    aviso("ok", "Añadida la puerta " + id + " (" + t + "). Conéctala: pulsa de dónde viene cada señal y después su entrada en " + id + ".");
+  });
+  $("mas-entrada").addEventListener("click", function () {
+    if (est.c.entradas.length >= 4) { aviso("mal", "Como máximo, 4 entradas (16 combinaciones)."); return; }
+    var letras = "ABCDEFHIJKLMNOPQRTUVWXYZ", n = "";
+    for (var i = 0; i < letras.length; i++) if (est.c.entradas.indexOf(letras[i]) < 0 && !est.c.puertas.some(function (g) { return g.id === letras[i]; })) { n = letras[i]; break; }
+    cambio(function () { est.c.entradas.push(n); });
+    aviso("ok", "Añadida la entrada " + n + ". Puedes cambiarle la letra en la lista de abajo.");
+  });
+  $("menos-entrada").addEventListener("click", function () {
+    if (est.c.entradas.length <= 1) return;
+    var e = est.c.entradas[est.c.entradas.length - 1];
+    cambio(function () {
+      est.c.entradas.pop();
+      est.c.puertas.forEach(function (g) { g.de = g.de.map(function (r) { return r === e ? null : r; }); });
+      Object.keys(est.c.salidas).forEach(function (s) { if (est.c.salidas[s] === e) est.c.salidas[s] = null; });
+    });
+    aviso("", "Quitada la entrada " + e + ".");
+  });
+  $("deshacer").addEventListener("click", function () {
+    if (!est.historial.length) { aviso("", "No hay nada que deshacer."); return; }
+    est.c = est.historial.pop(); est.sel = null; est.comparada = false;
+    est.c.entradas.forEach(function (x) { if (est.v[x] === undefined) est.v[x] = 0; });
+    ajustarObjetivo(); guardar(); pintar(); aviso("", "Deshecho el último cambio.");
+  });
+  $("vaciar").addEventListener("click", function () {
+    cambio(function () { est.c = est.partida ? clonar(est.partida) : montajeVacio(); });
+    est.c.entradas.forEach(function (x) { est.v[x] = 0; });
+    aviso("", (est.partida ? "Has vuelto al montaje del principio." : "Banco vacío.") + " Si te has equivocado, pulsa «Deshacer».");
+  });
+
+  // ------------------------------------------------------------------ guardar / evidencias
+  function enlace() {
+    var base = location.href.split("#")[0].split("?")[0];
+    var cfg = "modo=montar&puertas=" + CFG.paleta.join(",") + "&maxent=" + CFG.maxent + "&maxpuertas=" + CFG.maxpuertas +
+      (CFG.display ? "&display=si" : "") + (CFG.id ? "&id=" + CFG.id : "");
+    return base + "#" + cfg + "&m=" + L.codificarMontaje(est.c);
+  }
+  $("copiar-enlace").addEventListener("click", function () {
+    var url = enlace(), ta = $("enlace"); ta.value = url; ta.classList.remove("oculto"); ta.focus(); ta.select();
+    var hecho = false;
+    try { hecho = document.execCommand("copy"); } catch (e) { hecho = false; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { aviso("ok", "Enlace copiado. Pégalo en tu documento de entrega."); }, function () {});
+    aviso(hecho ? "ok" : "", hecho ? "Enlace copiado. Pégalo en tu documento de entrega." : "El enlace está seleccionado en el cuadro: cópialo con Ctrl+C.");
+  });
+  function descargar(nombre, blob) {
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nombre;
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  $("bajar-archivo").addEventListener("click", function () {
+    descargar("montaje_circuito.txt", new Blob([L.codificarMontaje(est.c) + "\n"], { type: "text/plain" }));
+    aviso("ok", "Archivo descargado (montaje_circuito.txt). Ábrelo aquí con «Abrir archivo» para seguir trabajando.");
+  });
+  $("abrir-archivo").addEventListener("change", function () {
+    var f = this.files && this.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      try { var m = L.decodificarMontaje(String(r.result).trim()); cambio(function () { est.c = m; }); est.c.entradas.forEach(function (x) { est.v[x] = 0; }); pintar(); aviso("ok", "Montaje abierto desde el archivo."); }
+      catch (e) { aviso("mal", e.message); }
+    };
+    r.readAsText(f); this.value = "";
+  });
+  $("bajar-imagen").addEventListener("click", function () {
+    var svgEl = $("lienzo").querySelector("svg"); if (!svgEl) return;
+    var copia = svgEl.cloneNode(true); copia.querySelectorAll(".pin").forEach(function (p) { p.remove(); });
+    var vb = copia.getAttribute("viewBox").split(" "), w = +vb[2], h = +vb[3];
+    copia.setAttribute("width", w); copia.setAttribute("height", h);
+    var xml = new XMLSerializer().serializeToString(copia);
+    var img = new Image();
+    img.onload = function () {
+      var cv = document.createElement("canvas"); cv.width = w * 2; cv.height = h * 2;
+      var ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height); ctx.scale(2, 2); ctx.drawImage(img, 0, 0);
+      cv.toBlob(function (b) { descargar("circuito.png", b); aviso("ok", "Imagen descargada (circuito.png). Pégala en tu documento de entrega."); }, "image/png");
+    };
+    img.onerror = function () { aviso("mal", "No se ha podido crear la imagen en este navegador. Haz una captura de pantalla del esquema."); };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+  });
+
+  // ------------------------------------------------------------------ pintado general
+  function aviso(t, s) { var a = $("aviso"); a.className = "aviso" + (t ? " " + t : ""); a.textContent = s; }
+  function pintar(soloEsquema) {
+    var val = evaluarParcial(), diag = L.diagnosticar(est.c);
+    var foco = document.activeElement, clave = null;
+    if (foco && $("lienzo").contains(foco)) clave = foco.getAttribute("data-pin") ? '[data-pin="' + foco.getAttribute("data-pin") + '"]' : foco.getAttribute("data-entrada") ? '[data-entrada="' + foco.getAttribute("data-entrada") + '"]' : null;
+    $("lienzo").innerHTML = dibujar(val);
+    // ajuste automático: si el esquema no cabe, se reduce para verlo entero (hasta que se use el zoom a mano)
+    var sv = $("lienzo").querySelector("svg"), disp = $("lienzo").clientWidth - 4;
+    if (est.zoomAuto && sv && disp > 100) {
+      var objetivoZ = Math.min(1, Math.max(0.45, disp / (+sv.getAttribute("data-w"))));
+      if (Math.abs(objetivoZ - est.zoom) > 0.01) { est.zoom = objetivoZ; $("z-txt").textContent = Math.round(est.zoom * 100) + " %"; $("lienzo").innerHTML = dibujar(val); }
+    }
+    if (clave) enfocar(clave);
+    if (soloEsquema) return;
+    pasoAPaso(val, diag); pintarTabla(diag); pintarListas(diag);
+    var ver = salidaVisible();
+    $("pred").classList.toggle("oculto", !est.predecir || !diag.completo);
+    $("p0").disabled = $("p1").disabled = ver;
+    $("ayuda-lienzo").textContent = MONTAR
+      ? "Pulsa un interruptor para cambiar su valor. Para conectar, pulsa el círculo de origen (a la derecha de una entrada o de una puerta) y después el círculo de destino (a la izquierda de una puerta, o junto a la lámpara). Para quitar un cable, pulsa el círculo de destino al que llega."
+      : "Pulsa los interruptores de la izquierda. Cable naranja continuo = 1; gris discontinuo = 0.";
+  }
+
+  // ------------------------------------------------------------------ zoom del esquema
+  window.addEventListener("resize", function () { if (est.zoomAuto) pintar(true); });
+  function fijarZoom(z, auto) { if (!auto) est.zoomAuto = false; est.zoom = Math.max(0.25, Math.min(2, Math.round(z * 100) / 100)); $("z-txt").textContent = Math.round(est.zoom * 100) + " %"; pintar(true); }
+  $("z-menos").addEventListener("click", function () { fijarZoom(est.zoom - 0.15); });
+  $("z-mas").addEventListener("click", function () { fijarZoom(est.zoom + 0.15); });
+  $("z-ajustar").addEventListener("click", function () {
+    var s = $("lienzo").querySelector("svg"); if (!s) return;
+    fijarZoom(($("lienzo").clientWidth - 4) / (+s.getAttribute("data-w")));
+  });
+
+  // ------------------------------------------------------------------ arranque
+  iniciar();
+  if (MONTAR) {
+    ["cab-montar", "caja-conex", "caja-guardar"].forEach(function (id) { $(id).classList.remove("oculto"); });
+    pintarPaleta();
+    $("t-tabla").textContent = "Tabla de verdad de tu circuito";
+  } else {
+    var e = ESCENAS[CFG.escena];
+    $("cab-ver").classList.remove("oculto");
+    $("titulo-escena").textContent = e.titulo; $("enunciado-escena").textContent = e.enunciado;
+    $("leyenda").innerHTML = Object.keys(e.significados).map(function (k) { return "<dt>" + k + " = 1:</dt><dd>" + e.significados[k] + ".</dd>"; }).join("");
+    $("m-ver").setAttribute("aria-pressed", est.predecir ? "false" : "true"); $("m-predecir").setAttribute("aria-pressed", est.predecir ? "true" : "false");
+  }
+  pintar();
+  if (!MONTAR) nuevaCombinacion();
+  if (!MONTAR && !est.predecir) aviso("", "Cambia las entradas y mira cómo se propaga la señal por cada cable.");
+  window.__banco = { est: est, cfg: CFG, ESCENAS: ESCENAS };
+})();
+</script>
+</body>
+</html>

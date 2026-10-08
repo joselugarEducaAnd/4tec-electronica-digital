@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es" id="exe-index"><head><meta charset="utf-8">
+<meta name="generator" content="eXeLearning v4"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lógica que decide</title><meta name="description" content="Electrónica digital: del 0 y 1 al circuito que decide">
+<link rel="icon" type="image/x-icon" href="libs/favicon.ico">
+<script>document.querySelector("html").classList.add("js");</script>
+<script src="libs/jquery/jquery.min.js"> </script><script src="libs/common_i18n.js"> </script>
+<script src="libs/common.js"> </script><script src="libs/exe_export.js"> </script>
+<script src="libs/bootstrap/bootstrap.bundle.min.js"> </script>
+<link rel="stylesheet" href="libs/bootstrap/bootstrap.min.css">
+<script src="idevices/text/text.js"></script><link rel="stylesheet" href="idevices/text/text.css">
+<link rel="stylesheet" href="content/css/base.css"><script src="theme/style.js"> </script>
+<link rel="stylesheet" href="theme/style.css"><link rel="stylesheet" href="theme/zzz-majuelo.css">
+</head><body class="exe-export exe-web-site"><script>document.body.className+=" js"</script>
+<div class="exe-content exe-export pre-js siteNav-hidden"><nav id="siteNav"><ul>
+<li class="active"><a href="index.html" class="active main-node no-ch">Lógica que decide</a></li>
+<li class=""><a href="html/1-estados-y-decisiones.html" class=" no-ch">1. Estados y decisiones</a></li>
+<li class=""><a href="html/2-el-bit-y-el-binario.html" class=" no-ch">2. El bit y el binario</a></li>
+<li class=""><a href="html/3-puertas-basicas.html" class=" no-ch">3. Puertas básicas</a></li>
+<li class=""><a href="html/4-mas-puertas.html" class=" no-ch">4. Más puertas</a></li>
+<li class=""><a href="html/5-del-enunciado-al-circuito.html" class=" no-ch">5. Del enunciado al circuito</a></li>
+<li class=""><a href="html/6-circuitos-equivalentes.html" class=" no-ch">6. Circuitos equivalentes</a></li>
+<li class=""><a href="html/7-simulacion-y-comprobacion.html" class=" no-ch">7. Simulación y comprobación</a></li>
+<li class=""><a href="html/8-reto-de-diseno.html" class=" no-ch">8. Reto de diseño</a></li>
+<li class=""><a href="html/9-preparar-el-examen.html" class=" no-ch">9. Preparar el examen</a></li>
+<li class=""><a href="html/glosario.html" class=" no-ch">Glosario</a></li>
+</ul></nav><main id="page-index" class="page">
+<header class="main-header"><div class="package-header"><p class="package-title">Lógica que decide</p></div>
+<div class="page-header"><h1 class="page-title">Lógica que decide</h1></div></header>
+<div id="page-content-page-index" class="page-content"><article class="box no-header"><div class="box-content">
+<div class="idevice_node text" data-idevice-type="text"><style>.exe-content{--chrome:#22425c;--chrome-osc:#162c3e;--chrome-tinte:#eef2f6;--chrome-linea:#c9d4de}.neg{text-decoration:overline;text-decoration-thickness:1.5px}.lectura-oculta{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}figure{margin:1.2em auto;text-align:center}figcaption{font-size:.92em;color:#4b5866;margin-top:.4em}.exe-content table.tabla-datos.tabla-verdad{width:auto;min-width:14em;margin:1em auto;text-align:center}.exe-content table.tabla-verdad th{text-align:center}table.tabla-verdad td,table.tabla-verdad th{padding:.35em .9em;font-family:"DejaVu Sans Mono",Menlo,Consolas,monospace}table.tabla-verdad .col-s{font-weight:700}details.solucion{margin:.9em 0 .2em;padding:.6em .8em;border:1px solid #c9d4de;border-radius:8px;background:#f8fafc}details.solucion>summary{cursor:pointer;font-weight:700;min-height:44px;display:list-item;padding:.5em 0}.exe-content table.tabla-datos.tabla-hex{width:auto;margin:1em auto;text-align:center;font-family:"DejaVu Sans Mono",Menlo,Consolas,monospace;font-size:.92em}.exe-content table.tabla-hex th{text-align:left}.exe-content table.tabla-hex td{padding:.3em .55em}.exe-content table.tabla-hex tr.fin-bloque td,.exe-content table.tabla-hex tr.fin-bloque th{border-bottom:3px solid #22425c}.desplazable{max-width:100%;overflow-x:auto}dl.glosario dt{font-weight:700;margin-top:.8em;color:#162c3e}dl.glosario dd{margin:.2em 0 0 1.2em}</style><p>Una alarma que suena solo si está conectada y alguien abre la puerta. Un secador de manos que sopla cuando detecta las manos. Una luz de escalera que se enciende con cualquiera de dos interruptores. Todos estos aparatos <strong>toman decisiones</strong>: miran lo que pasa y responden siempre con la misma regla.</p>
+<p>En esta unidad aprenderás cómo deciden por dentro, usando solo dos valores, el <strong>0</strong> y el <strong>1</strong>. No necesitas saber nada de antemano: cada palabra nueva se explica la primera vez que aparece.</p>
+<figure><img src="content/resources/sistema_alarma.svg" alt="Las entradas C y P llegan a un circuito lógico, que aplica la regla S = C · P y decide si suena la sirena S." style="width:100%;height:auto;max-width:900px"><figcaption>Un sistema que decide: recibe entradas, aplica una regla y produce una salida.</figcaption></figure>
+<h2>El reto final</h2>
+<p>Al terminar, diseñarás tú solo un circuito que resuelva una situación real: escribirás qué significa cada entrada, apuntarás qué hace el circuito en cada caso, escribirás su regla, lo dibujarás y lo comprobarás en un simulador (un programa que imita el circuito) con <strong>todos</strong> los casos posibles.</p>
+<h2>Qué aprenderás</h2>
+<ul>
+<li>Distinguir una señal analógica de una digital y decir qué significa el 0 y el 1 en cada caso.</li>
+<li>Pasar números pequeños de decimal a binario y de binario a decimal.</li>
+<li>Reconocer las puertas lógicas por su nombre, su símbolo y su tabla.</li>
+<li>Traducir una situación a tabla, expresión y circuito, y comprobarlo.</li>
+</ul>
+<h2>Las páginas de la unidad</h2>
+<ul><li><a href="html/1-estados-y-decisiones.html">1. Estados y decisiones</a></li><li><a href="html/2-el-bit-y-el-binario.html">2. El bit y el binario</a></li><li><a href="html/3-puertas-basicas.html">3. Puertas básicas</a></li><li><a href="html/4-mas-puertas.html">4. Más puertas</a></li><li><a href="html/5-del-enunciado-al-circuito.html">5. Del enunciado al circuito</a></li><li><a href="html/6-circuitos-equivalentes.html">6. Circuitos equivalentes</a></li><li><a href="html/7-simulacion-y-comprobacion.html">7. Simulación y comprobación</a></li><li><a href="html/8-reto-de-diseno.html">8. Reto de diseño</a></li><li><a href="html/9-preparar-el-examen.html">9. Preparar el examen</a></li><li><a href="html/glosario.html">Glosario</a> (material de consulta)</li></ul>
+<h2>Dónde se entrega cada cosa</h2>
+<div class="desplazable"><table class="tabla-datos"><thead><tr><th>Tarea de Moodle</th><th>Cómo se hace</th><th>Qué se entrega</th><th>¿Cuenta para la nota?</th></tr></thead><tbody><tr><td>Prueba binario y puertas</td><td>Como un examen: individual, en papel, en clase, sin apuntes ni hoja de referencia (20 minutos), al empezar la sesión siguiente a la de la página 4</td><td>La hoja de la prueba, al terminar. La nota y la corrección comentada aparecen en Moodle.</td><td><strong>Sí</strong></td></tr><tr><td>Retos de lógica</td><td>Individual (puedes practicar en pareja)</td><td>El reto de diseño en PDF. Las instrucciones están en la página del reto.</td><td><strong>Sí</strong></td></tr><tr><td>Examen · Electrónica digital</td><td>Individual, en papel, sin apuntes ni hoja de referencia</td><td>La hoja del examen, al terminar. La nota y la devolución aparecen en Moodle.</td><td><strong>Sí</strong></td></tr></tbody></table></div>
+<p>Las actividades de práctica de cada página <strong>no cuentan para la nota</strong>: sirven para aprender y puedes repetirlas cuantas veces quieras. Cada una tiene su solución explicada debajo, en «Comprueba tu respuesta». Inténtalo primero y ábrela después.</p>
+<div class="bloque bloque-pdf"><p class="bloque-titulo">Tu hoja de referencia</p><p>Toda la unidad cabe en dos caras: <a href="content/resources/hoja_referencia.pdf" target="_blank" rel="noopener">descarga la hoja de referencia (PDF)</a>. Úsala para estudiar y repasar; en las pruebas y en el examen no se puede usar.</p></div></div>
+</div></article></div></main><div class="nav-buttons"><span class="nav-button nav-button-left" aria-hidden="true"><span>Anterior</span></span><a href="html/1-estados-y-decisiones.html" class="nav-button nav-button-right"><span>Siguiente</span></a></div>
+<footer id="siteFooter"><div id="siteFooterContent"><div id="packageLicense" class="cc cc-by-sa"><p><span class="license-label">Licencia: </span><a href="https://creativecommons.org/licenses/by-sa/4.0/" class="license">Creative Commons: Reconocimiento - compartir igual 4.0</a></p></div></div></footer>
+</div></body></html>

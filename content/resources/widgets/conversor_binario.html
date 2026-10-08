@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bits y valor posicional</title>
+<!--
+  Escena «conversor binario» sobre logica.js. Configuración (name del iframe > #hash > ?query):
+    bits=4|8           número de bits (por defecto 4)
+    hex=si             muestra el hexadecimal (solo ampliación en 4.º ESO)
+    modo=explorar|reto modo inicial
+-->
+<style>
+:root{--tinta:#1d2733;--suave:#4b5866;--linea:#c9d4de;--panel:#f6f8fa;--acento:#22425c;--acento-osc:#162c3e;
+  --uno:#b34700;--uno-fondo:#fff1e6;--cero:#5f6b77;--ok:#1f6e43;--ok-fondo:#e8f5ee;--mal:#9b2c2c;--mal-fondo:#fbeaea;--foco:#0b62d6}
+*{box-sizing:border-box}
+html,body{margin:0;background:transparent;color:var(--tinta);font-family:Verdana,"DejaVu Sans",Arial,sans-serif;font-size:16px;line-height:1.45}
+.panel{max-width:900px;margin:0 auto;padding:12px;background:#fff;border:1px solid var(--linea);border-radius:12px}
+h2{font-size:1.05rem;margin:0 0 .5rem;color:var(--acento-osc)}
+button{font:inherit;color:inherit;cursor:pointer;min-height:44px;min-width:44px;border-radius:8px;border:2px solid var(--acento);background:#fff;padding:.35rem .8rem}
+button:focus-visible{outline:3px solid var(--foco);outline-offset:2px}
+.modo{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.modo button[aria-pressed="true"]{background:var(--acento);color:#fff}
+.bits{display:grid;gap:8px;margin:8px 0}
+/* 8 bits en pantalla estrecha: dos filas de 4 (dos grupos de 4 bits), para que cada bit mida ≥ 44 px */
+@media (max-width:560px){.bits.ocho{grid-template-columns:repeat(4,minmax(0,1fr))!important;row-gap:14px}}
+.bit{display:flex;flex-direction:column;align-items:center;gap:4px}
+.peso{font-size:.9rem;color:var(--suave)}
+.peso strong{color:var(--tinta)}
+.bit button{width:100%;font-family:"DejaVu Sans Mono",Menlo,monospace;font-size:1.6rem;font-weight:700;min-height:64px}
+.bit button[aria-pressed="true"]{background:var(--uno-fondo);border-color:var(--uno);color:#7a3000}
+.bit button[aria-pressed="false"]{border-color:var(--cero);color:#38424c}
+.aporta{font-family:"DejaVu Sans Mono",Menlo,monospace;font-size:.95rem;min-height:1.4em}
+.caja{background:var(--panel);border:1px solid var(--linea);border-radius:10px;padding:10px;margin-top:10px}
+.suma{font-family:"DejaVu Sans Mono",Menlo,monospace;font-size:1.15rem;word-break:break-word}
+.grande{font-size:1.35rem;font-weight:700}
+.aviso{margin-top:10px;padding:.55rem .7rem;border-radius:8px;border-left:5px solid var(--acento);background:#eef2f6;min-height:2.6em}
+.aviso.ok{border-color:var(--ok);background:var(--ok-fondo)}
+.aviso.mal{border-color:var(--mal);background:var(--mal-fondo)}
+.reto{display:none}
+.modo-reto .reto{display:block}
+.fila{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pie{font-size:.85rem;color:var(--suave);margin:.6rem 0 0}
+</style>
+</head>
+<body>
+<div class="panel" id="panel">
+  <noscript><p><strong>Este conversor necesita JavaScript.</strong> Usa la tabla de valor posicional de la hoja de referencia: 8, 4, 2, 1.</p></noscript>
+  <div class="modo" role="group" aria-label="Modo">
+    <button type="button" id="m-explorar" aria-pressed="true">Explorar</button>
+    <button type="button" id="m-reto" aria-pressed="false">Reto</button>
+  </div>
+  <div class="reto caja" id="reto">
+    <h2>Reto</h2>
+    <p class="grande" id="objetivo"></p>
+    <div class="fila"><button type="button" id="comprobar">Comprobar</button><button type="button" id="otro">Otro número</button></div>
+  </div>
+  <h2 id="t-bits">Pulsa cada bit para cambiarlo entre 0 y 1</h2>
+  <div class="bits" id="bits" role="group" aria-labelledby="t-bits"></div>
+  <div class="caja" aria-live="polite">
+    <p class="suma" id="suma"></p>
+    <p class="grande" id="resultado"></p>
+    <p class="suma" id="hex" hidden></p>
+  </div>
+  <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
+  <div class="fila" style="margin-top:8px"><button type="button" id="cero">Todos a 0</button></div>
+  <p class="pie">Cada bit vale 0 o 1. Su posición dice cuánto aporta: cada posición vale el doble que la de su derecha.</p>
+</div>
+<script>
+/* logica.js · sha256 7c671c4a7b1e (copia empaquetada: no editar aquí) */
+/*
+ * logica.js — Base lógica común de los interactivos de electrónica digital
+ * (4º ESO Tecnología y 2º Bachillerato Tecnología e Ingeniería · IES El Majuelo).
+ *
+ * Fuente única: 04_RECURSOS_COMUNES/interactivos/logica_digital/. Cada .elpx lleva una
+ * copia empaquetada; no editar las copias, editar aquí y volver a empaquetar.
+ * Pruebas: `node test_logica.js` (deben pasar todas antes de empaquetar).
+ *
+ * Modelo: lógica IDEAL de dos estados (0 y 1). No representa tensiones, tiempos de
+ * propagación, rebotes ni ningún otro fenómeno eléctrico real.
+ *
+ * NOTACIÓN ÚNICA (decisión 2026-10-05):
+ *   - Entradas en MAYÚSCULA (A, B, C… o inicial con significado: P, V, M1…).
+ *   - Salida S (S1, S2… si hay varias).
+ *   - Producto con punto explícito A·B; suma +; XOR ⊕; negación con barra encima.
+ *   - Tablas: columnas A B C | S, filas 000→111, A = bit de mayor peso.
+ * Para ESCRIBIR expresiones (teclado) se aceptan además: * . & (producto), | (suma),
+ * ^ (XOR) y, para negar, ' detrás o ¬ ! ~ delante. Lo que se MUESTRA usa siempre
+ * la notación única (aHTML / aLatex).
+ * Precedencia: negación > producto (·) > XOR (⊕) > suma (+). Ante la duda, paréntesis.
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.LogicaDigital = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  // ------------------------------------------------------------------ utilidades
+  function bit(v) {
+    if (v === 0 || v === 1) return v;
+    if (v === true) return 1;
+    if (v === false) return 0;
+    throw new Error("Valor lógico no válido: " + v + " (solo 0 o 1)");
+  }
+  function lista(xs) {
+    if (xs.length <= 1) return xs.join("");
+    return xs.slice(0, -1).join(", ") + " y " + xs[xs.length - 1];
+  }
+  function listaO(xs) {
+    if (xs.length <= 1) return xs.join("");
+    return xs.slice(0, -1).join(", ") + " o " + xs[xs.length - 1];
+  }
+
+  // ------------------------------------------------------------------ puertas
+  // fn recibe un array de bits. AND/OR/NAND/NOR/XOR/XNOR admiten 2 o más entradas
+  // (XOR de n entradas = 1 si hay un número impar de unos).
+  var PUERTAS = {
+    NOT:  { nombre: "NOT",  cotidiano: "NO",  minEntradas: 1, maxEntradas: 1,
+            regla: "La salida es lo contrario de la entrada.",
+            fn: function (e) { return e[0] ? 0 : 1; } },
+    AND:  { nombre: "AND",  cotidiano: "Y",   minEntradas: 2, maxEntradas: 8,
+            regla: "La salida vale 1 solo si todas las entradas valen 1.",
+            fn: function (e) { return e.every(function (x) { return x === 1; }) ? 1 : 0; } },
+    OR:   { nombre: "OR",   cotidiano: "O",   minEntradas: 2, maxEntradas: 8,
+            regla: "La salida vale 1 si al menos una entrada vale 1.",
+            fn: function (e) { return e.some(function (x) { return x === 1; }) ? 1 : 0; } },
+    NAND: { nombre: "NAND", cotidiano: "NO-Y", minEntradas: 2, maxEntradas: 8,
+            regla: "Es una AND con la salida negada: vale 0 solo si todas las entradas valen 1.",
+            fn: function (e) { return e.every(function (x) { return x === 1; }) ? 0 : 1; } },
+    NOR:  { nombre: "NOR",  cotidiano: "NO-O", minEntradas: 2, maxEntradas: 8,
+            regla: "Es una OR con la salida negada: vale 1 solo si todas las entradas valen 0.",
+            fn: function (e) { return e.some(function (x) { return x === 1; }) ? 0 : 1; } },
+    XOR:  { nombre: "XOR",  cotidiano: "O exclusiva", minEntradas: 2, maxEntradas: 8,
+            regla: "Con dos entradas, la salida vale 1 si las entradas son distintas.",
+            fn: function (e) { return e.reduce(function (s, x) { return s ^ x; }, 0); } },
+    XNOR: { nombre: "XNOR", cotidiano: "igualdad", minEntradas: 2, maxEntradas: 8,
+            regla: "Con dos entradas, la salida vale 1 si las entradas son iguales.",
+            fn: function (e) { return e.reduce(function (s, x) { return s ^ x; }, 0) ? 0 : 1; } }
+  };
+  var ORDEN_PUERTAS = ["NOT", "AND", "OR", "NAND", "NOR", "XOR", "XNOR"];
+
+  function puerta(tipo) {
+    var p = PUERTAS[tipo];
+    if (!p) throw new Error("Puerta desconocida: " + tipo);
+    return p;
+  }
+  function comprobarAridad(tipo, n) {
+    var p = puerta(tipo);
+    if (n < p.minEntradas || n > p.maxEntradas)
+      throw new Error("La puerta " + tipo + " no admite " + n + " entrada(s)");
+  }
+  function evaluarPuerta(tipo, entradas) {
+    comprobarAridad(tipo, entradas.length);
+    return puerta(tipo).fn(entradas.map(bit));
+  }
+
+  /* Explicación en lenguaje llano de POR QUÉ la salida vale lo que vale.
+   * nombres: nombres de las entradas (por defecto A, B, C…); salida: nombre de la salida. */
+  function explicarPuerta(tipo, entradas, nombres, salida) {
+    entradas = entradas.map(bit);
+    nombres = nombres || entradas.map(function (_, i) { return String.fromCharCode(65 + i); });
+    salida = salida || "S";
+    var s = evaluarPuerta(tipo, entradas);
+    var unos = nombres.filter(function (_, i) { return entradas[i] === 1; });
+    var ceros = nombres.filter(function (_, i) { return entradas[i] === 0; });
+    var todas = entradas.length === 2 ? "las dos entradas" : "todas las entradas";
+    var r;
+    switch (tipo) {
+      case "NOT":
+        r = nombres[0] + " = " + entradas[0] + ", y la NOT da lo contrario"; break;
+      case "AND":
+        r = s ? todas + " valen 1"
+              : lista(ceros) + (ceros.length > 1 ? " valen 0" : " vale 0") + ", y la AND necesita que " + todas + " valgan 1";
+        break;
+      case "OR":
+        r = s ? lista(unos) + (unos.length > 1 ? " valen 1" : " vale 1") + ", y a la OR le basta una entrada a 1"
+              : "ninguna entrada vale 1";
+        break;
+      case "NAND":
+        r = s ? lista(ceros) + (ceros.length > 1 ? " valen 0" : " vale 0") + ": la AND daría 0 y la NAND lo niega"
+              : todas + " valen 1: la AND daría 1 y la NAND lo niega";
+        break;
+      case "NOR":
+        r = s ? "ninguna entrada vale 1: la OR daría 0 y la NOR lo niega"
+              : lista(unos) + (unos.length > 1 ? " valen 1" : " vale 1") + ": la OR daría 1 y la NOR lo niega";
+        break;
+      case "XOR":
+        r = entradas.length === 2
+          ? (s ? "las entradas son distintas" : "las entradas son iguales")
+          : "hay " + unos.length + " entrada(s) a 1, un número " + (unos.length % 2 ? "impar" : "par");
+        break;
+      case "XNOR":
+        r = entradas.length === 2
+          ? (s ? "las entradas son iguales" : "las entradas son distintas")
+          : "hay " + unos.length + " entrada(s) a 1, un número " + (unos.length % 2 ? "impar" : "par");
+        break;
+    }
+    return salida + " = " + s + " porque " + r + ".";
+  }
+
+  // ------------------------------------------------------------------ combinaciones y tablas
+  /* Todas las combinaciones de n entradas, en orden 0…0 → 1…1 (la primera entrada es el
+   * bit de mayor peso). */
+  function combinaciones(n) {
+    if (n < 0 || n > 10) throw new Error("Número de entradas fuera de rango: " + n);
+    var filas = [];
+    for (var k = 0; k < (1 << n); k++) {
+      var f = [];
+      for (var i = n - 1; i >= 0; i--) f.push((k >> i) & 1);
+      filas.push(f);
+    }
+    return filas;
+  }
+  function asignacion(variables, fila) {
+    var o = {};
+    variables.forEach(function (v, i) { o[v] = fila[i]; });
+    return o;
+  }
+  /* f(valores) → 0/1, con valores = {A:0, B:1, …}. */
+  function tablaVerdad(variables, f) {
+    return {
+      variables: variables.slice(),
+      filas: combinaciones(variables.length).map(function (fila) {
+        return { entradas: fila, salida: bit(f(asignacion(variables, fila))) };
+      })
+    };
+  }
+  /* Compara las salidas propuestas (array de 0/1/null) con la tabla correcta. */
+  function comprobarTabla(tabla, propuestas) {
+    if (propuestas.length !== tabla.filas.length)
+      throw new Error("Se esperaban " + tabla.filas.length + " salidas");
+    var res = tabla.filas.map(function (f, i) {
+      var p = propuestas[i];
+      return { fila: i, entradas: f.entradas, esperada: f.salida,
+               propuesta: p === null || p === undefined ? null : bit(p),
+               correcta: p !== null && p !== undefined && bit(p) === f.salida };
+    });
+    return {
+      filas: res,
+      aciertos: res.filter(function (r) { return r.correcta; }).length,
+      vacias: res.filter(function (r) { return r.propuesta === null; }).length,
+      total: res.length
+    };
+  }
+
+  // ------------------------------------------------------------------ expresiones
+  var PREC = { or: 1, xor: 2, and: 3, not: 4, var: 5, const: 5 };
+
+  function tokenizar(texto) {
+    var t = [], i = 0, s = String(texto).normalize("NFD");   // Ā precompuesta → A + barra
+    while (i < s.length) {
+      var c = s[i];
+      if (/\s/.test(c)) { i++; continue; }
+      if (/[A-Z]/.test(c)) {
+        var j = i + 1;
+        while (j < s.length && /[0-9]/.test(s[j])) j++;
+        t.push({ k: "var", v: s.slice(i, j), pos: i }); i = j;
+        // barra encima escrita con carácter combinante (Ā, A̅)
+        while (s[i] === "̄" || s[i] === "̅") { t.push({ k: "post'", pos: i }); i++; }
+        continue;
+      }
+      if (/[a-z]/.test(c)) throw errorExpr("Las variables se escriben en mayúscula: " + c.toUpperCase() + " en lugar de " + c, i);
+      if (c === "0" || c === "1") { t.push({ k: "const", v: +c, pos: i }); i++; continue; }
+      if ("·*.&∧⋅".indexOf(c) >= 0) { t.push({ k: "and", pos: i }); i++; continue; }
+      if ("+|∨".indexOf(c) >= 0) { t.push({ k: "or", pos: i }); i++; continue; }
+      if ("⊕^".indexOf(c) >= 0) { t.push({ k: "xor", pos: i }); i++; continue; }
+      if ("'’".indexOf(c) >= 0) { t.push({ k: "post'", pos: i }); i++; continue; }
+      if ("¬!~".indexOf(c) >= 0) { t.push({ k: "pre¬", pos: i }); i++; continue; }
+      if (c === "(" || c === ")") { t.push({ k: c, pos: i }); i++; continue; }
+      throw errorExpr("Símbolo no reconocido: «" + c + "»", i);
+    }
+    return t;
+  }
+  function errorExpr(msg, pos) { var e = new Error(msg); e.posicion = pos; e.expresion = true; return e; }
+
+  /* Convierte texto en un árbol. opciones.yuxtaposicion = true permite AB como A·B
+   * (por defecto NO: la notación exige el punto y el error lo dice). */
+  function analizar(texto, opciones) {
+    opciones = opciones || {};
+    var tk = tokenizar(texto), p = 0;
+    if (!tk.length) throw errorExpr("La expresión está vacía", 0);
+    function ver() { return tk[p]; }
+    function tomar(k) {
+      var x = tk[p];
+      if (!x || x.k !== k) throw errorExpr(k === ")" ? "Falta cerrar un paréntesis" : "Se esperaba " + k, x ? x.pos : String(texto).length);
+      p++; return x;
+    }
+    function nario(tipo, sub, opTok) {
+      var a = [sub()];
+      while (ver() && ver().k === opTok) { p++; a.push(sub()); }
+      return a.length === 1 ? a[0] : { t: tipo, args: a };
+    }
+    function expr() { return nario("or", xorE, "or"); }
+    function xorE() { return nario("xor", andE, "xor"); }
+    function andE() {
+      var a = [unario()];
+      for (;;) {
+        var x = ver();
+        if (x && x.k === "and") { p++; a.push(unario()); continue; }
+        if (x && (x.k === "var" || x.k === "const" || x.k === "(" || x.k === "pre¬")) {
+          if (!opciones.yuxtaposicion)
+            throw errorExpr("Falta el punto (·) del producto antes de la posición " + (x.pos + 1), x.pos);
+          a.push(unario()); continue;
+        }
+        break;
+      }
+      return a.length === 1 ? a[0] : { t: "and", args: a };
+    }
+    function unario() {
+      var x = ver();
+      if (x && x.k === "pre¬") { p++; return posfijo({ t: "not", a: unario() }); }
+      return posfijo(atomo());
+    }
+    function posfijo(n) {
+      while (ver() && ver().k === "post'") { p++; n = { t: "not", a: n }; }
+      return n;
+    }
+    function atomo() {
+      var x = ver();
+      if (!x) throw errorExpr("La expresión termina antes de tiempo", String(texto).length);
+      if (x.k === "var") { p++; return { t: "var", n: x.v }; }
+      if (x.k === "const") { p++; return { t: "const", v: x.v }; }
+      if (x.k === "(") { p++; var e = expr(); tomar(")"); return e; }
+      throw errorExpr("Falta una variable antes de la posición " + (x.pos + 1), x.pos);
+    }
+    var r = expr();
+    if (p < tk.length) throw errorExpr(tk[p].k === ")" ? "Sobra un paréntesis de cierre" : "Sobra algo a partir de la posición " + (tk[p].pos + 1), tk[p].pos);
+    return r;
+  }
+
+  function evaluar(n, valores) {
+    switch (n.t) {
+      case "var":
+        if (!(n.n in valores)) throw new Error("Falta el valor de " + n.n);
+        return bit(valores[n.n]);
+      case "const": return n.v;
+      case "not": return evaluar(n.a, valores) ? 0 : 1;
+      case "and": return n.args.every(function (a) { return evaluar(a, valores) === 1; }) ? 1 : 0;
+      case "or": return n.args.some(function (a) { return evaluar(a, valores) === 1; }) ? 1 : 0;
+      case "xor": return n.args.reduce(function (s, a) { return s ^ evaluar(a, valores); }, 0);
+    }
+    throw new Error("Nodo desconocido: " + n.t);
+  }
+  function compararNombres(a, b) {
+    var ma = /^([A-Z])(\d*)$/.exec(a), mb = /^([A-Z])(\d*)$/.exec(b);
+    if (ma[1] !== mb[1]) return ma[1] < mb[1] ? -1 : 1;
+    return (+ma[2] || 0) - (+mb[2] || 0);
+  }
+  function variables(n) {
+    var s = {};
+    (function rec(x) {
+      if (x.t === "var") s[x.n] = 1;
+      else if (x.t === "not") rec(x.a);
+      else if (x.args) x.args.forEach(rec);
+    })(n);
+    return Object.keys(s).sort(compararNombres);
+  }
+
+  function escHTML(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function formatear(n, f, padre) {
+    var s;
+    switch (n.t) {
+      case "var": s = f.var(n.n); break;
+      case "const": s = String(n.v); break;
+      case "not": return f.neg(formatear(n.a, f, null));     // la barra agrupa: nunca paréntesis
+      case "and": s = n.args.map(function (a) { return formatear(a, f, "and"); }).join(f.and); break;
+      case "or": s = n.args.map(function (a) { return formatear(a, f, "or"); }).join(f.or); break;
+      case "xor": s = n.args.map(function (a) { return formatear(a, f, "xor"); }).join(f.xor); break;
+    }
+    return padre && PREC[n.t] < PREC[padre] ? f.par(s) : s;
+  }
+  var F_HTML = { var: escHTML, and: " · ", or: " + ", xor: " ⊕ ",
+    neg: function (s) { return '<span class="neg">' + s + "</span>"; },
+    par: function (s) { return "(" + s + ")"; } };
+  var F_LATEX = { var: function (v) { var m = /^([A-Z])(\d+)$/.exec(v); return m ? m[1] + "_{" + m[2] + "}" : v; },
+    and: " \\cdot ", or: " + ", xor: " \\oplus ",
+    neg: function (s) { return "\\overline{" + s + "}"; },
+    par: function (s) { return "\\left(" + s + "\\right)"; } };
+  var F_ENTRADA = { var: function (v) { return v; }, and: "·", or: " + ", xor: " ⊕ ",
+    neg: function (s) { return "¬(" + s + ")"; },
+    par: function (s) { return "(" + s + ")"; } };
+  var F_LECTURA = { var: function (v) { return v; }, and: " y ", or: " o ", xor: " o exclusiva ",
+    neg: function (s) { return "no (" + s + ")"; },
+    par: function (s) { return "(" + s + ")"; } };
+
+  /* aHTML: para pantalla; la negación es <span class="neg"> (CSS: text-decoration: overline)
+   * y el lector de pantalla debe recibir aLectura en un aria-label. */
+  function aHTML(n) { return formatear(n, F_HTML, null); }
+  function aLatex(n) { return formatear(n, F_LATEX, null); }
+  function aEntrada(n) { return formatear(n, F_ENTRADA, null); }   // reescribible y re-analizable
+  function aLectura(n) { return formatear(n, F_LECTURA, null); }   // texto para lector de pantalla
+
+  function tablaExpresion(n, vars) {
+    vars = vars || variables(n);
+    return tablaVerdad(vars, function (v) { return evaluar(n, v); });
+  }
+
+  // ------------------------------------------------------------------ equivalencia
+  /* f y g: funciones (valores → bit) o árboles de expresión. Recorre las 2^n combinaciones. */
+  function comoFuncion(x) { return typeof x === "function" ? x : function (v) { return evaluar(x, v); }; }
+  function compararFunciones(vars, f, g) {
+    f = comoFuncion(f); g = comoFuncion(g);
+    var filas = combinaciones(vars.length).map(function (fila) {
+      var v = asignacion(vars, fila), a = bit(f(v)), b = bit(g(v));
+      return { entradas: fila, f: a, g: b, igual: a === b };
+    });
+    var distintas = filas.filter(function (r) { return !r.igual; });
+    return { equivalentes: distintas.length === 0, filas: filas, contraejemplos: distintas,
+             combinaciones: filas.length };
+  }
+
+  // ------------------------------------------------------------------ circuitos
+  /* Circuito: { entradas: ["A","B"], puertas: [{id:"P1", tipo:"AND", de:["A","B"]}, …],
+   *             salidas: {S: "P1"} }
+   * Valida referencias, aridad y ciclos. Devuelve el orden de cálculo. */
+  function validarCircuito(c) {
+    var ids = {};
+    c.entradas.forEach(function (e) {
+      if (!/^[A-Z]\d*$/.test(e)) throw new Error("Nombre de entrada no válido: " + e);
+      if (ids[e]) throw new Error("Nombre repetido: " + e);
+      ids[e] = "entrada";
+    });
+    c.puertas.forEach(function (g) {
+      if (ids[g.id]) throw new Error("Nombre repetido: " + g.id);
+      ids[g.id] = g;
+      comprobarAridad(g.tipo, g.de.length);
+    });
+    c.puertas.forEach(function (g) {
+      g.de.forEach(function (r) { if (!ids[r]) throw new Error(g.id + " usa una señal que no existe: " + r); });
+    });
+    Object.keys(c.salidas).forEach(function (s) {
+      if (!ids[c.salidas[s]]) throw new Error("La salida " + s + " no está conectada a nada que exista");
+    });
+    // orden topológico (los circuitos combinacionales no tienen realimentación)
+    var orden = [], estado = {};
+    function visitar(id) {
+      if (ids[id] === "entrada" || estado[id] === 2) return;
+      if (estado[id] === 1) throw new Error("El circuito tiene un lazo (realimentación) en " + id);
+      estado[id] = 1;
+      ids[id].de.forEach(visitar);
+      estado[id] = 2; orden.push(id);
+    }
+    c.puertas.forEach(function (g) { visitar(g.id); });
+    return orden;
+  }
+  /* Devuelve el valor de TODAS las señales (entradas, salidas de cada puerta) y de las salidas. */
+  function evaluarCircuito(c, valores) {
+    var orden = validarCircuito(c), senal = {}, porId = {};
+    c.puertas.forEach(function (g) { porId[g.id] = g; });
+    c.entradas.forEach(function (e) {
+      if (!(e in valores)) throw new Error("Falta el valor de la entrada " + e);
+      senal[e] = bit(valores[e]);
+    });
+    orden.forEach(function (id) {
+      var g = porId[id];
+      senal[id] = evaluarPuerta(g.tipo, g.de.map(function (r) { return senal[r]; }));
+    });
+    var sal = {};
+    Object.keys(c.salidas).forEach(function (s) { sal[s] = senal[c.salidas[s]]; });
+    return { senales: senal, salidas: sal, orden: orden };
+  }
+  function tablaCircuito(c, salida) {
+    salida = salida || Object.keys(c.salidas)[0];
+    return tablaVerdad(c.entradas, function (v) { return evaluarCircuito(c, v).salidas[salida]; });
+  }
+  /* Árbol de expresión equivalente a una salida (para mostrar «el circuito escrito»). */
+  function circuitoAExpresion(c, salida) {
+    validarCircuito(c);
+    salida = salida || Object.keys(c.salidas)[0];
+    var porId = {};
+    c.puertas.forEach(function (g) { porId[g.id] = g; });
+    function rec(id) {
+      var g = porId[id];
+      if (!g) return { t: "var", n: id };
+      var a = g.de.map(rec);
+      switch (g.tipo) {
+        case "NOT": return { t: "not", a: a[0] };
+        case "AND": return { t: "and", args: a };
+        case "OR": return { t: "or", args: a };
+        case "XOR": return { t: "xor", args: a };
+        case "NAND": return { t: "not", a: { t: "and", args: a } };
+        case "NOR": return { t: "not", a: { t: "or", args: a } };
+        case "XNOR": return { t: "not", a: { t: "xor", args: a } };
+      }
+    }
+    return rec(c.salidas[salida]);
+  }
+
+  // ------------------------------------------------------------------ circuitos en construcción
+  /* Diagnóstico de un circuito que se está montando (admite entradas de puerta a null).
+   * Devuelve {completo, problemas:[texto], avisos:[texto]} en lenguaje llano. */
+  function diagnosticar(c) {
+    var problemas = [], avisos = [], ids = {};
+    c.entradas.forEach(function (e) { ids[e] = "entrada"; });
+    c.puertas.forEach(function (g) { ids[g.id] = g; });
+    c.puertas.forEach(function (g) {
+      g.de.forEach(function (r, i) {
+        if (r === null || r === undefined || r === "") problemas.push("La entrada " + (i + 1) + " de la puerta " + g.id + " (" + g.tipo + ") no está conectada.");
+        else if (!ids[r]) problemas.push("La puerta " + g.id + " usa una señal que ya no existe.");
+      });
+    });
+    var salidas = Object.keys(c.salidas);
+    if (!salidas.length) problemas.push("No hay ninguna salida.");
+    salidas.forEach(function (s) {
+      var r = c.salidas[s];
+      if (r === null || r === undefined || r === "") problemas.push("La salida " + s + " no está conectada.");
+      else if (!ids[r]) problemas.push("La salida " + s + " está conectada a una señal que ya no existe.");
+    });
+    if (!problemas.length) {
+      try { validarCircuito(c); } catch (e) { problemas.push(e.message.indexOf("lazo") >= 0 ? "Hay un lazo: una puerta acaba recibiendo su propia salida. En estos circuitos las señales solo van hacia delante." : e.message); }
+    }
+    // puertas que no llegan a ninguna salida y entradas sin usar (avisos, no impiden simular)
+    var usadas = {};
+    (function marcar(lista) {
+      lista.forEach(function (r) {
+        if (!r || usadas[r]) return; usadas[r] = 1;
+        var g = ids[r]; if (g && g !== "entrada") marcar(g.de);
+      });
+    })(salidas.map(function (s) { return c.salidas[s]; }));
+    c.puertas.forEach(function (g) { if (!usadas[g.id]) avisos.push("La puerta " + g.id + " no llega a ninguna salida: sobra o falta conectarla."); });
+    c.entradas.forEach(function (e) { if (!usadas[e]) avisos.push("La entrada " + e + " no se usa en ninguna puerta."); });
+    return { completo: problemas.length === 0, problemas: problemas, avisos: avisos };
+  }
+
+  /* Colocación automática por niveles: entradas a la izquierda, cada puerta una columna a la
+   * derecha de la más lejana de sus fuentes, salidas al final. Dentro de cada columna se ordena
+   * por la altura media de las fuentes (menos cruces). Admite entradas de puerta a null. */
+  function disponer(c, opciones) {
+    opciones = opciones || {};
+    var colX = opciones.columna || 170, filaY = opciones.fila || 90, x0 = opciones.x0 || 60, y0 = opciones.y0 || 50;
+    var margen = opciones.margen !== undefined ? opciones.margen : 24;
+    var altoDe = opciones.alto || function (g) { return Math.max(filaY - margen, (g.de.length + 1) * 26); };
+    var porId = {}, nivel = {}, enCurso = {};
+    c.puertas.forEach(function (g) { porId[g.id] = g; });
+    c.entradas.forEach(function (e) { nivel[e] = 0; });
+    function niv(id) {
+      if (nivel[id] !== undefined) return nivel[id];
+      var g = porId[id]; if (!g) return 0;
+      if (enCurso[id]) return 1;                 // lazo: no colgarse; el diagnóstico ya lo avisa
+      enCurso[id] = 1;
+      var m = 0; g.de.forEach(function (r) { if (r) m = Math.max(m, niv(r)); });
+      enCurso[id] = 0;
+      return (nivel[id] = m + 1);
+    }
+    c.puertas.forEach(function (g) { niv(g.id); });
+    var maxN = 0; Object.keys(nivel).forEach(function (k) { maxN = Math.max(maxN, nivel[k]); });
+    var pos = {};
+    c.entradas.forEach(function (e, i) { pos[e] = { x: x0, y: y0 + i * filaY, nivel: 0 }; });
+    for (var n = 1; n <= maxN; n++) {
+      var col = c.puertas.filter(function (g) { return nivel[g.id] === n; });
+      col.forEach(function (g) {
+        var ys = g.de.filter(function (r) { return r && pos[r]; }).map(function (r) { return pos[r].y; });
+        g.__y = ys.length ? ys.reduce(function (a, b) { return a + b; }, 0) / ys.length : 1e9;
+      });
+      col.sort(function (a, b) { return a.__y - b.__y || (a.id < b.id ? -1 : 1); });
+      // separación según la ALTURA real de cada puerta (opciones.alto), no un paso fijo: sin solapes
+      var fondo = -1e9;
+      col.forEach(function (g) {
+        var h = altoDe(g), deseado = g.__y === 1e9 ? fondo + margen + h / 2 : g.__y;
+        var y = Math.max(deseado, fondo + margen + h / 2, y0);
+        pos[g.id] = { x: x0 + n * colX, y: y, nivel: n, alto: h }; fondo = y + h / 2; delete g.__y;
+      });
+    }
+    // salidas: a la altura de su fuente, pero nunca unas encima de otras (varias pueden salir de la misma puerta)
+    var salidas = Object.keys(c.salidas), sepS = opciones.filaSalida || Math.min(filaY, 70), ultimaS = -1e9;
+    salidas.map(function (s, i) { var r = c.salidas[s]; return { s: s, i: i, y: r && pos[r] ? pos[r].y : y0 + i * sepS }; })
+      .sort(function (a, b) { return a.y - b.y || a.i - b.i; })
+      .forEach(function (o) {
+        var y = Math.max(o.y, ultimaS + sepS, y0); ultimaS = y;
+        pos["salida:" + o.s] = { x: x0 + (maxN + 1) * colX, y: y, nivel: maxN + 1 };
+      });
+    var maxY = 0; Object.keys(pos).forEach(function (k) { maxY = Math.max(maxY, pos[k].y + (pos[k].alto || 0) / 2); });
+    return { pos: pos, niveles: maxN, ancho: x0 + (maxN + 1) * colX + 80, alto: maxY + filaY };
+  }
+
+  /* Guardar/abrir un montaje como texto (enlace o archivo). Formato versionado y validado. */
+  var TIPOS_VALIDOS = ORDEN_PUERTAS;
+  function codificarMontaje(m) {
+    var json = JSON.stringify({ v: 1, entradas: m.entradas, significados: m.significados || {}, puertas: m.puertas.map(function (g) { return { id: g.id, tipo: g.tipo, de: g.de }; }), salidas: m.salidas });
+    var b64 = (typeof btoa === "function") ? btoa(unescape(encodeURIComponent(json))) : Buffer.from(json, "utf8").toString("base64");
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function decodificarMontaje(texto) {
+    var b64 = String(texto).trim().replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    var json;
+    try { json = (typeof atob === "function") ? decodeURIComponent(escape(atob(b64))) : Buffer.from(b64, "base64").toString("utf8"); }
+    catch (e) { throw new Error("El enlace o el archivo no contiene un montaje válido."); }
+    var m; try { m = JSON.parse(json); } catch (e) { throw new Error("El enlace o el archivo no contiene un montaje válido."); }
+    if (!m || m.v !== 1 || !Array.isArray(m.entradas) || !Array.isArray(m.puertas) || typeof m.salidas !== "object")
+      throw new Error("El montaje está incompleto o es de otra versión.");
+    m.entradas.forEach(function (e) { if (!/^[A-Z]\d*$/.test(e)) throw new Error("Nombre de entrada no válido: " + e); });
+    m.puertas.forEach(function (g) {
+      if (!/^[A-Za-z]\w*$/.test(g.id) || TIPOS_VALIDOS.indexOf(g.tipo) < 0 || !Array.isArray(g.de)) throw new Error("Hay una puerta no válida en el montaje.");
+      comprobarAridad(g.tipo, g.de.length);
+    });
+    return { entradas: m.entradas, significados: m.significados || {}, puertas: m.puertas, salidas: m.salidas };
+  }
+
+  // ------------------------------------------------------------------ numeración
+  function aBinario(n, bits) {
+    if (!Number.isInteger(n) || n < 0) throw new Error("Solo números naturales: " + n);
+    var s = n.toString(2);
+    if (bits) { if (s.length > bits) throw new Error(n + " no cabe en " + bits + " bits"); s = ("0".repeat(bits) + s).slice(-bits); }
+    return s;
+  }
+  function deBinario(s) {
+    s = String(s).replace(/\s/g, "");
+    if (!/^[01]+$/.test(s)) throw new Error("Un número binario solo lleva ceros y unos: " + s);
+    return parseInt(s, 2);
+  }
+  /* Valor posicional: «1011» → [{bit:1, peso:8}, {bit:0, peso:4}, …] y su suma. */
+  function pasosBinarioADecimal(s) {
+    s = String(s).replace(/\s/g, ""); deBinario(s);
+    var n = s.length;
+    var pasos = s.split("").map(function (b, i) { return { bit: +b, peso: Math.pow(2, n - 1 - i), exponente: n - 1 - i }; });
+    return { pasos: pasos, total: pasos.reduce(function (t, p) { return t + p.bit * p.peso; }, 0) };
+  }
+  /* Divisiones sucesivas entre 2: [{dividendo, cociente, resto}…]; el binario se lee de abajo arriba. */
+  function pasosDecimalABinario(n) {
+    if (!Number.isInteger(n) || n < 0) throw new Error("Solo números naturales: " + n);
+    var pasos = [];
+    if (n === 0) return { pasos: [{ dividendo: 0, cociente: 0, resto: 0 }], binario: "0" };
+    while (n > 0) { pasos.push({ dividendo: n, cociente: Math.floor(n / 2), resto: n % 2 }); n = Math.floor(n / 2); }
+    return { pasos: pasos, binario: pasos.map(function (p) { return p.resto; }).reverse().join("") };
+  }
+  /* Ampliación (4º TEC): hexadecimal. */
+  function aHex(n) { if (!Number.isInteger(n) || n < 0) throw new Error("Solo números naturales: " + n); return n.toString(16).toUpperCase(); }
+  function deHex(s) { s = String(s).trim().toUpperCase(); if (!/^[0-9A-F]+$/.test(s)) throw new Error("Cifra hexadecimal no válida: " + s); return parseInt(s, 16); }
+  function binarioAHexPorGrupos(s) {
+    s = String(s).replace(/\s/g, ""); deBinario(s);
+    while (s.length % 4) s = "0" + s;
+    var g = s.match(/.{4}/g);
+    return { grupos: g, cifras: g.map(function (x) { return aHex(parseInt(x, 2)); }) };
+  }
+
+  return {
+    VERSION: "1.2.0",
+    PUERTAS: PUERTAS, ORDEN_PUERTAS: ORDEN_PUERTAS,
+    bit: bit, evaluarPuerta: evaluarPuerta, explicarPuerta: explicarPuerta,
+    combinaciones: combinaciones, tablaVerdad: tablaVerdad, comprobarTabla: comprobarTabla,
+    analizar: analizar, evaluar: evaluar, variables: variables, tablaExpresion: tablaExpresion,
+    aHTML: aHTML, aLatex: aLatex, aEntrada: aEntrada, aLectura: aLectura,
+    compararFunciones: compararFunciones,
+    validarCircuito: validarCircuito, evaluarCircuito: evaluarCircuito,
+    tablaCircuito: tablaCircuito, circuitoAExpresion: circuitoAExpresion,
+    diagnosticar: diagnosticar, disponer: disponer,
+    codificarMontaje: codificarMontaje, decodificarMontaje: decodificarMontaje,
+    aBinario: aBinario, deBinario: deBinario, pasosBinarioADecimal: pasosBinarioADecimal,
+    pasosDecimalABinario: pasosDecimalABinario, aHex: aHex, deHex: deHex,
+    binarioAHexPorGrupos: binarioAHexPorGrupos,
+    _lista: lista
+  };
+});
+
+</script>
+<script>
+(function () {
+  "use strict";
+  var L = window.LogicaDigital;
+  function leerConfig() {
+    var fuentes = [window.name || "", (location.hash || "").slice(1), (location.search || "").slice(1)], cfg = {};
+    for (var f = fuentes.length - 1; f >= 0; f--) fuentes[f].split(/[;&]/).forEach(function (par) {
+      var kv = par.split("="); if (kv.length === 2) cfg[kv[0].trim()] = kv[1].trim(); });
+    return { bits: cfg.bits === "8" ? 8 : 4, hex: cfg.hex === "si", modo: cfg.modo === "reto" ? "reto" : "explorar" };
+  }
+  var CFG = leerConfig(), N = CFG.bits, MAX = (1 << N) - 1;
+  var estado = { b: new Array(N).fill(0), modo: CFG.modo, objetivo: null, intentos: 0, ultimos: [] };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function valor() { return L.deBinario(estado.b.join("")); }
+  function construir() {
+    var c = $("bits"); c.style.gridTemplateColumns = "repeat(" + N + ",minmax(0,1fr))"; c.classList.toggle("ocho", N === 8); c.innerHTML = "";
+    for (var i = 0; i < N; i++) (function (i) {
+      var peso = 1 << (N - 1 - i), d = document.createElement("div"); d.className = "bit";
+      d.innerHTML = '<span class="peso">vale <strong>' + peso + "</strong></span>";
+      var b = document.createElement("button"); b.type = "button"; b.id = "bit-" + i;
+      b.addEventListener("click", function () { estado.b[i] = 1 - estado.b[i]; pintar(); if (estado.modo === "explorar") explicar(); });
+      d.appendChild(b);
+      var a = document.createElement("span"); a.className = "aporta"; a.id = "ap-" + i; d.appendChild(a);
+      c.appendChild(d);
+    })(i);
+  }
+  function pintar() {
+    var v = valor(), terminos = [];
+    for (var i = 0; i < N; i++) {
+      var peso = 1 << (N - 1 - i), b = $("bit-" + i);
+      b.textContent = estado.b[i];
+      b.setAttribute("aria-pressed", estado.b[i] ? "true" : "false");
+      b.setAttribute("aria-label", "Bit que vale " + peso + ": está a " + estado.b[i] + ". Pulsa para cambiarlo.");
+      $("ap-" + i).textContent = estado.b[i] ? "+" + peso : "+0";
+      if (estado.b[i]) terminos.push(String(peso));
+    }
+    $("suma").textContent = "Suma de las posiciones con 1: " + (terminos.length ? terminos.join(" + ") : "0") + " = " + v;
+    $("resultado").textContent = estado.b.join("") + " en binario = " + v + " en decimal";
+    if (CFG.hex) { $("hex").hidden = false;
+      var g = L.binarioAHexPorGrupos(estado.b.join(""));
+      $("hex").textContent = "Ampliación · hexadecimal: grupos de 4 bits " + g.grupos.join(" ") + " → " + g.cifras.join("") + " en hexadecimal"; }
+    var panel = $("panel"); panel.classList.toggle("modo-reto", estado.modo === "reto");
+    $("m-explorar").setAttribute("aria-pressed", estado.modo === "explorar" ? "true" : "false");
+    $("m-reto").setAttribute("aria-pressed", estado.modo === "reto" ? "true" : "false");
+    if (estado.objetivo !== null) $("objetivo").textContent = "Consigue el número " + estado.objetivo + " encendiendo los bits necesarios.";
+  }
+  function aviso(t, s) { var a = $("aviso"); a.className = "aviso" + (t ? " " + t : ""); a.textContent = s; }
+  function explicar() {
+    var v = valor();
+    aviso("", v === 0 ? "Todos los bits están a 0: el número es 0." :
+      "Valen " + v + " porque sumas lo que vale cada posición que tiene un 1.");
+  }
+  function nuevoObjetivo() {
+    var t; do { t = 1 + Math.floor(Math.random() * MAX); } while (estado.ultimos.indexOf(t) >= 0);
+    estado.ultimos.push(t); if (estado.ultimos.length > 4) estado.ultimos.shift();
+    estado.objetivo = t; estado.intentos = 0; estado.b = new Array(N).fill(0); pintar();
+    aviso("", "Empieza por el bit que más vale y pregúntate: ¿cabe en " + t + "?");
+  }
+  function comprobar() {
+    var v = valor(), t = estado.objetivo, correcto = L.aBinario(t, N);
+    estado.intentos++;
+    if (v === t) { aviso("ok", "Correcto: " + correcto + " = " + L.pasosBinarioADecimal(correcto).pasos.filter(function (p) { return p.bit; }).map(function (p) { return p.peso; }).join(" + ") + " = " + t + "."); return; }
+    var pista = v > t ? "Te has pasado: " + v + " es más que " + t + ". Apaga algún bit." : "Te faltan " + (t - v) + ". Busca qué posiciones suman eso.";
+    if (estado.intentos < 3) aviso("mal", "Todavía no: tienes " + v + ". " + pista);
+    else aviso("mal", "Tienes " + v + ". La solución es " + correcto + ": " + L.pasosBinarioADecimal(correcto).pasos.filter(function (p) { return p.bit; }).map(function (p) { return p.peso; }).join(" + ") + " = " + t + ". Pulsa «Otro número» para practicar más.");
+  }
+  $("m-explorar").addEventListener("click", function () { estado.modo = "explorar"; estado.objetivo = null; pintar(); explicar(); });
+  $("m-reto").addEventListener("click", function () { estado.modo = "reto"; nuevoObjetivo(); });
+  $("comprobar").addEventListener("click", comprobar);
+  $("otro").addEventListener("click", nuevoObjetivo);
+  $("cero").addEventListener("click", function () { estado.b = new Array(N).fill(0); pintar(); if (estado.modo === "explorar") explicar(); else aviso("", "Todos los bits a 0. Vuelve a intentarlo."); });
+  construir();
+  if (estado.modo === "reto") nuevoObjetivo(); else { pintar(); explicar(); }
+  window.__conv = { estado: estado, cfg: CFG };
+})();
+</script>
+</body>
+</html>

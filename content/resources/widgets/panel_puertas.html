@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio de puertas lógicas</title>
+<!--
+  Escena «panel de puertas» sobre logica.js (fuente única: 04_RECURSOS_COMUNES/interactivos/
+  logica_digital/). Configuración, por orden de prioridad: atributo name del iframe, #hash, ?query.
+    puertas=NOT,AND,OR      puertas disponibles (por defecto NOT,AND,OR,NAND,NOR,XOR)
+    modo=explorar|predecir  modo inicial (el alumnado puede cambiarlo)
+  Ejemplo dentro del .elpx: <iframe name="puertas=NOT,AND,OR;modo=explorar" …>
+-->
+<style>
+:root{
+  --tinta:#1d2733; --suave:#4b5866; --fondo:#ffffff; --panel:#f6f8fa; --linea:#c9d4de;
+  --acento:#22425c; --acento-osc:#162c3e; --uno:#b34700; --uno-fondo:#fff1e6; --cero:#5f6b77;
+  --ok:#1f6e43; --ok-fondo:#e8f5ee; --mal:#9b2c2c; --mal-fondo:#fbeaea; --foco:#0b62d6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:transparent;color:var(--tinta);
+  font-family:Verdana,"DejaVu Sans",Arial,sans-serif;font-size:16px;line-height:1.45}
+.panel{max-width:980px;margin:0 auto;padding:12px;background:var(--fondo);border:1px solid var(--linea);border-radius:12px}
+h2{font-size:1.05rem;margin:0 0 .5rem;color:var(--acento-osc)}
+.fila{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.rejilla{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;margin-top:10px}
+@media (max-width:680px){.rejilla{grid-template-columns:1fr}}
+.caja{background:var(--panel);border:1px solid var(--linea);border-radius:10px;padding:10px}
+button{font:inherit;color:inherit;cursor:pointer;min-height:44px;min-width:44px;border-radius:8px;
+  border:2px solid var(--acento);background:#fff;padding:.35rem .8rem}
+button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--foco);outline-offset:2px}
+.puerta[aria-pressed="true"]{background:var(--acento);color:#fff}
+.modo{display:flex;gap:6px;flex-wrap:wrap}
+.modo button[aria-pressed="true"]{background:var(--acento);color:#fff}
+.valor{font-family:"DejaVu Sans Mono",Menlo,Consolas,monospace;font-weight:700;font-size:1.1rem}
+svg{display:block;width:100%;height:auto;max-width:480px;margin:0 auto}
+.tog{cursor:pointer}.tog:focus{outline:none}.tog:focus-visible .tog-caja{stroke:var(--foco);stroke-width:5}
+.tog:hover .tog-caja{stroke-width:4}
+.ayuda{font-size:.92rem;color:var(--suave);text-align:center;margin:.2rem 0 .4rem}
+.salida{display:flex;align-items:center;gap:12px;margin-top:8px;font-size:1.1rem}
+.piloto{width:46px;height:46px;border-radius:50%;border:3px solid var(--cero);background:#e9edf1;flex:none;
+  display:flex;align-items:center;justify-content:center;font-weight:700}
+.piloto.on{background:#ffd27a;border-color:var(--uno);box-shadow:0 0 0 4px #ffe9bf}
+.piloto.oculto{background:#fff;border-style:dashed}
+.expr{font-family:"DejaVu Serif",Georgia,serif;font-size:1.25rem;margin:.3rem 0}
+.neg{text-decoration:overline;text-decoration-thickness:2px}
+.regla{color:var(--suave);margin:.2rem 0 .4rem}
+table{border-collapse:collapse;width:100%;max-width:340px;margin:0 auto;text-align:center}
+th,td{border:1px solid var(--linea);padding:0}
+th{background:#e8eef4;padding:.35rem}
+#tbody tr{cursor:pointer}
+td button{width:100%;border:0;border-radius:0;background:transparent;min-height:40px;font-family:"DejaVu Sans Mono",Menlo,monospace}
+tr.actual td{background:#fff4d6;font-weight:700}
+tr.actual td:first-child{box-shadow:inset 4px 0 0 var(--uno)}
+.col-s{font-weight:700}
+.aviso{margin-top:10px;padding:.55rem .7rem;border-radius:8px;border-left:5px solid var(--acento);background:#eef2f6;min-height:2.6em}
+.aviso.ok{border-color:var(--ok);background:var(--ok-fondo)}
+.aviso.mal{border-color:var(--mal);background:var(--mal-fondo)}
+.prediccion{display:none;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.predecir .prediccion{display:flex}
+.progreso{font-size:.95rem;color:var(--suave);margin:.4rem 0 0}
+.visualmente-oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.pie{font-size:.85rem;color:var(--suave);margin:.6rem 0 0}
+</style>
+</head>
+<body>
+<div class="panel" id="panel">
+  <noscript>
+    <p><strong>Este laboratorio necesita JavaScript.</strong> Mientras tanto, usa la tabla de puertas de la hoja de referencia:
+    NOT: S = 1 si A = 0. AND: S = 1 solo si A = 1 y B = 1. OR: S = 1 si A = 1 o B = 1.
+    NAND: S = 0 solo si A = 1 y B = 1. NOR: S = 1 solo si A = 0 y B = 0. XOR: S = 1 si A y B son distintas.</p>
+  </noscript>
+  <div class="fila" style="justify-content:space-between">
+    <div>
+      <h2 id="t-puerta">Elige una puerta</h2>
+      <div class="fila" id="puertas" role="group" aria-labelledby="t-puerta"></div>
+    </div>
+    <div>
+      <h2 id="t-modo">Modo</h2>
+      <div class="modo" role="group" aria-labelledby="t-modo">
+        <button type="button" id="m-explorar" aria-pressed="true">Explorar</button>
+        <button type="button" id="m-predecir" aria-pressed="false">Predecir</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="rejilla">
+    <div class="caja">
+      <h2 id="nombre-puerta">AND</h2>
+      <p class="regla" id="regla"></p>
+      <div id="simbolo" role="group" aria-label="Símbolo de la puerta con sus entradas"></div>
+      <p class="ayuda" id="ayuda-entradas">Pulsa una entrada del dibujo para cambiarla entre 0 y 1.</p>
+      <div class="salida">
+        <div class="piloto" id="piloto" aria-hidden="true">S</div>
+        <div><span class="visualmente-oculto">Salida: </span><span class="valor" id="salida-texto">S = 0</span>
+          <span id="salida-estado" class="regla"></span></div>
+      </div>
+      <div class="prediccion" id="prediccion">
+        <span id="t-pred">¿Cuánto vale S?</span>
+        <button type="button" id="p0" aria-describedby="t-pred">Predigo S = 0</button>
+        <button type="button" id="p1" aria-describedby="t-pred">Predigo S = 1</button>
+      </div>
+      <p class="expr" id="expr" aria-hidden="true"></p>
+      <p class="visualmente-oculto" id="expr-lectura"></p>
+    </div>
+    <div class="caja">
+      <h2 id="t-tabla">Tabla de verdad</h2>
+      <table aria-labelledby="t-tabla"><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+      <p class="progreso" id="progreso"></p>
+      <div class="fila" style="justify-content:center;margin-top:8px">
+        <button type="button" id="reiniciar">Empezar de nuevo</button>
+      </div>
+    </div>
+  </div>
+  <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
+  <p class="pie">Modelo ideal: solo dos estados, 0 y 1. Un circuito real tiene tensiones, retrasos y consumos que aquí no aparecen.</p>
+</div>
+
+<script>
+/* logica.js · sha256 7c671c4a7b1e (copia empaquetada: no editar aquí) */
+/*
+ * logica.js — Base lógica común de los interactivos de electrónica digital
+ * (4º ESO Tecnología y 2º Bachillerato Tecnología e Ingeniería · IES El Majuelo).
+ *
+ * Fuente única: 04_RECURSOS_COMUNES/interactivos/logica_digital/. Cada .elpx lleva una
+ * copia empaquetada; no editar las copias, editar aquí y volver a empaquetar.
+ * Pruebas: `node test_logica.js` (deben pasar todas antes de empaquetar).
+ *
+ * Modelo: lógica IDEAL de dos estados (0 y 1). No representa tensiones, tiempos de
+ * propagación, rebotes ni ningún otro fenómeno eléctrico real.
+ *
+ * NOTACIÓN ÚNICA (decisión 2026-10-05):
+ *   - Entradas en MAYÚSCULA (A, B, C… o inicial con significado: P, V, M1…).
+ *   - Salida S (S1, S2… si hay varias).
+ *   - Producto con punto explícito A·B; suma +; XOR ⊕; negación con barra encima.
+ *   - Tablas: columnas A B C | S, filas 000→111, A = bit de mayor peso.
+ * Para ESCRIBIR expresiones (teclado) se aceptan además: * . & (producto), | (suma),
+ * ^ (XOR) y, para negar, ' detrás o ¬ ! ~ delante. Lo que se MUESTRA usa siempre
+ * la notación única (aHTML / aLatex).
+ * Precedencia: negación > producto (·) > XOR (⊕) > suma (+). Ante la duda, paréntesis.
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.LogicaDigital = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  // ------------------------------------------------------------------ utilidades
+  function bit(v) {
+    if (v === 0 || v === 1) return v;
+    if (v === true) return 1;
+    if (v === false) return 0;
+    throw new Error("Valor lógico no válido: " + v + " (solo 0 o 1)");
+  }
+  function lista(xs) {
+    if (xs.length <= 1) return xs.join("");
+    return xs.slice(0, -1).join(", ") + " y " + xs[xs.length - 1];
+  }
+  function listaO(xs) {
+    if (xs.length <= 1) return xs.join("");
+    return xs.slice(0, -1).join(", ") + " o " + xs[xs.length - 1];
+  }
+
+  // ------------------------------------------------------------------ puertas
+  // fn recibe un array de bits. AND/OR/NAND/NOR/XOR/XNOR admiten 2 o más entradas
+  // (XOR de n entradas = 1 si hay un número impar de unos).
+  var PUERTAS = {
+    NOT:  { nombre: "NOT",  cotidiano: "NO",  minEntradas: 1, maxEntradas: 1,
+            regla: "La salida es lo contrario de la entrada.",
+            fn: function (e) { return e[0] ? 0 : 1; } },
+    AND:  { nombre: "AND",  cotidiano: "Y",   minEntradas: 2, maxEntradas: 8,
+            regla: "La salida vale 1 solo si todas las entradas valen 1.",
+            fn: function (e) { return e.every(function (x) { return x === 1; }) ? 1 : 0; } },
+    OR:   { nombre: "OR",   cotidiano: "O",   minEntradas: 2, maxEntradas: 8,
+            regla: "La salida vale 1 si al menos una entrada vale 1.",
+            fn: function (e) { return e.some(function (x) { return x === 1; }) ? 1 : 0; } },
+    NAND: { nombre: "NAND", cotidiano: "NO-Y", minEntradas: 2, maxEntradas: 8,
+            regla: "Es una AND con la salida negada: vale 0 solo si todas las entradas valen 1.",
+            fn: function (e) { return e.every(function (x) { return x === 1; }) ? 0 : 1; } },
+    NOR:  { nombre: "NOR",  cotidiano: "NO-O", minEntradas: 2, maxEntradas: 8,
+            regla: "Es una OR con la salida negada: vale 1 solo si todas las entradas valen 0.",
+            fn: function (e) { return e.some(function (x) { return x === 1; }) ? 0 : 1; } },
+    XOR:  { nombre: "XOR",  cotidiano: "O exclusiva", minEntradas: 2, maxEntradas: 8,
+            regla: "Con dos entradas, la salida vale 1 si las entradas son distintas.",
+            fn: function (e) { return e.reduce(function (s, x) { return s ^ x; }, 0); } },
+    XNOR: { nombre: "XNOR", cotidiano: "igualdad", minEntradas: 2, maxEntradas: 8,
+            regla: "Con dos entradas, la salida vale 1 si las entradas son iguales.",
+            fn: function (e) { return e.reduce(function (s, x) { return s ^ x; }, 0) ? 0 : 1; } }
+  };
+  var ORDEN_PUERTAS = ["NOT", "AND", "OR", "NAND", "NOR", "XOR", "XNOR"];
+
+  function puerta(tipo) {
+    var p = PUERTAS[tipo];
+    if (!p) throw new Error("Puerta desconocida: " + tipo);
+    return p;
+  }
+  function comprobarAridad(tipo, n) {
+    var p = puerta(tipo);
+    if (n < p.minEntradas || n > p.maxEntradas)
+      throw new Error("La puerta " + tipo + " no admite " + n + " entrada(s)");
+  }
+  function evaluarPuerta(tipo, entradas) {
+    comprobarAridad(tipo, entradas.length);
+    return puerta(tipo).fn(entradas.map(bit));
+  }
+
+  /* Explicación en lenguaje llano de POR QUÉ la salida vale lo que vale.
+   * nombres: nombres de las entradas (por defecto A, B, C…); salida: nombre de la salida. */
+  function explicarPuerta(tipo, entradas, nombres, salida) {
+    entradas = entradas.map(bit);
+    nombres = nombres || entradas.map(function (_, i) { return String.fromCharCode(65 + i); });
+    salida = salida || "S";
+    var s = evaluarPuerta(tipo, entradas);
+    var unos = nombres.filter(function (_, i) { return entradas[i] === 1; });
+    var ceros = nombres.filter(function (_, i) { return entradas[i] === 0; });
+    var todas = entradas.length === 2 ? "las dos entradas" : "todas las entradas";
+    var r;
+    switch (tipo) {
+      case "NOT":
+        r = nombres[0] + " = " + entradas[0] + ", y la NOT da lo contrario"; break;
+      case "AND":
+        r = s ? todas + " valen 1"
+              : lista(ceros) + (ceros.length > 1 ? " valen 0" : " vale 0") + ", y la AND necesita que " + todas + " valgan 1";
+        break;
+      case "OR":
+        r = s ? lista(unos) + (unos.length > 1 ? " valen 1" : " vale 1") + ", y a la OR le basta una entrada a 1"
+              : "ninguna entrada vale 1";
+        break;
+      case "NAND":
+        r = s ? lista(ceros) + (ceros.length > 1 ? " valen 0" : " vale 0") + ": la AND daría 0 y la NAND lo niega"
+              : todas + " valen 1: la AND daría 1 y la NAND lo niega";
+        break;
+      case "NOR":
+        r = s ? "ninguna entrada vale 1: la OR daría 0 y la NOR lo niega"
+              : lista(unos) + (unos.length > 1 ? " valen 1" : " vale 1") + ": la OR daría 1 y la NOR lo niega";
+        break;
+      case "XOR":
+        r = entradas.length === 2
+          ? (s ? "las entradas son distintas" : "las entradas son iguales")
+          : "hay " + unos.length + " entrada(s) a 1, un número " + (unos.length % 2 ? "impar" : "par");
+        break;
+      case "XNOR":
+        r = entradas.length === 2
+          ? (s ? "las entradas son iguales" : "las entradas son distintas")
+          : "hay " + unos.length + " entrada(s) a 1, un número " + (unos.length % 2 ? "impar" : "par");
+        break;
+    }
+    return salida + " = " + s + " porque " + r + ".";
+  }
+
+  // ------------------------------------------------------------------ combinaciones y tablas
+  /* Todas las combinaciones de n entradas, en orden 0…0 → 1…1 (la primera entrada es el
+   * bit de mayor peso). */
+  function combinaciones(n) {
+    if (n < 0 || n > 10) throw new Error("Número de entradas fuera de rango: " + n);
+    var filas = [];
+    for (var k = 0; k < (1 << n); k++) {
+      var f = [];
+      for (var i = n - 1; i >= 0; i--) f.push((k >> i) & 1);
+      filas.push(f);
+    }
+    return filas;
+  }
+  function asignacion(variables, fila) {
+    var o = {};
+    variables.forEach(function (v, i) { o[v] = fila[i]; });
+    return o;
+  }
+  /* f(valores) → 0/1, con valores = {A:0, B:1, …}. */
+  function tablaVerdad(variables, f) {
+    return {
+      variables: variables.slice(),
+      filas: combinaciones(variables.length).map(function (fila) {
+        return { entradas: fila, salida: bit(f(asignacion(variables, fila))) };
+      })
+    };
+  }
+  /* Compara las salidas propuestas (array de 0/1/null) con la tabla correcta. */
+  function comprobarTabla(tabla, propuestas) {
+    if (propuestas.length !== tabla.filas.length)
+      throw new Error("Se esperaban " + tabla.filas.length + " salidas");
+    var res = tabla.filas.map(function (f, i) {
+      var p = propuestas[i];
+      return { fila: i, entradas: f.entradas, esperada: f.salida,
+               propuesta: p === null || p === undefined ? null : bit(p),
+               correcta: p !== null && p !== undefined && bit(p) === f.salida };
+    });
+    return {
+      filas: res,
+      aciertos: res.filter(function (r) { return r.correcta; }).length,
+      vacias: res.filter(function (r) { return r.propuesta === null; }).length,
+      total: res.length
+    };
+  }
+
+  // ------------------------------------------------------------------ expresiones
+  var PREC = { or: 1, xor: 2, and: 3, not: 4, var: 5, const: 5 };
+
+  function tokenizar(texto) {
+    var t = [], i = 0, s = String(texto).normalize("NFD");   // Ā precompuesta → A + barra
+    while (i < s.length) {
+      var c = s[i];
+      if (/\s/.test(c)) { i++; continue; }
+      if (/[A-Z]/.test(c)) {
+        var j = i + 1;
+        while (j < s.length && /[0-9]/.test(s[j])) j++;
+        t.push({ k: "var", v: s.slice(i, j), pos: i }); i = j;
+        // barra encima escrita con carácter combinante (Ā, A̅)
+        while (s[i] === "̄" || s[i] === "̅") { t.push({ k: "post'", pos: i }); i++; }
+        continue;
+      }
+      if (/[a-z]/.test(c)) throw errorExpr("Las variables se escriben en mayúscula: " + c.toUpperCase() + " en lugar de " + c, i);
+      if (c === "0" || c === "1") { t.push({ k: "const", v: +c, pos: i }); i++; continue; }
+      if ("·*.&∧⋅".indexOf(c) >= 0) { t.push({ k: "and", pos: i }); i++; continue; }
+      if ("+|∨".indexOf(c) >= 0) { t.push({ k: "or", pos: i }); i++; continue; }
+      if ("⊕^".indexOf(c) >= 0) { t.push({ k: "xor", pos: i }); i++; continue; }
+      if ("'’".indexOf(c) >= 0) { t.push({ k: "post'", pos: i }); i++; continue; }
+      if ("¬!~".indexOf(c) >= 0) { t.push({ k: "pre¬", pos: i }); i++; continue; }
+      if (c === "(" || c === ")") { t.push({ k: c, pos: i }); i++; continue; }
+      throw errorExpr("Símbolo no reconocido: «" + c + "»", i);
+    }
+    return t;
+  }
+  function errorExpr(msg, pos) { var e = new Error(msg); e.posicion = pos; e.expresion = true; return e; }
+
+  /* Convierte texto en un árbol. opciones.yuxtaposicion = true permite AB como A·B
+   * (por defecto NO: la notación exige el punto y el error lo dice). */
+  function analizar(texto, opciones) {
+    opciones = opciones || {};
+    var tk = tokenizar(texto), p = 0;
+    if (!tk.length) throw errorExpr("La expresión está vacía", 0);
+    function ver() { return tk[p]; }
+    function tomar(k) {
+      var x = tk[p];
+      if (!x || x.k !== k) throw errorExpr(k === ")" ? "Falta cerrar un paréntesis" : "Se esperaba " + k, x ? x.pos : String(texto).length);
+      p++; return x;
+    }
+    function nario(tipo, sub, opTok) {
+      var a = [sub()];
+      while (ver() && ver().k === opTok) { p++; a.push(sub()); }
+      return a.length === 1 ? a[0] : { t: tipo, args: a };
+    }
+    function expr() { return nario("or", xorE, "or"); }
+    function xorE() { return nario("xor", andE, "xor"); }
+    function andE() {
+      var a = [unario()];
+      for (;;) {
+        var x = ver();
+        if (x && x.k === "and") { p++; a.push(unario()); continue; }
+        if (x && (x.k === "var" || x.k === "const" || x.k === "(" || x.k === "pre¬")) {
+          if (!opciones.yuxtaposicion)
+            throw errorExpr("Falta el punto (·) del producto antes de la posición " + (x.pos + 1), x.pos);
+          a.push(unario()); continue;
+        }
+        break;
+      }
+      return a.length === 1 ? a[0] : { t: "and", args: a };
+    }
+    function unario() {
+      var x = ver();
+      if (x && x.k === "pre¬") { p++; return posfijo({ t: "not", a: unario() }); }
+      return posfijo(atomo());
+    }
+    function posfijo(n) {
+      while (ver() && ver().k === "post'") { p++; n = { t: "not", a: n }; }
+      return n;
+    }
+    function atomo() {
+      var x = ver();
+      if (!x) throw errorExpr("La expresión termina antes de tiempo", String(texto).length);
+      if (x.k === "var") { p++; return { t: "var", n: x.v }; }
+      if (x.k === "const") { p++; return { t: "const", v: x.v }; }
+      if (x.k === "(") { p++; var e = expr(); tomar(")"); return e; }
+      throw errorExpr("Falta una variable antes de la posición " + (x.pos + 1), x.pos);
+    }
+    var r = expr();
+    if (p < tk.length) throw errorExpr(tk[p].k === ")" ? "Sobra un paréntesis de cierre" : "Sobra algo a partir de la posición " + (tk[p].pos + 1), tk[p].pos);
+    return r;
+  }
+
+  function evaluar(n, valores) {
+    switch (n.t) {
+      case "var":
+        if (!(n.n in valores)) throw new Error("Falta el valor de " + n.n);
+        return bit(valores[n.n]);
+      case "const": return n.v;
+      case "not": return evaluar(n.a, valores) ? 0 : 1;
+      case "and": return n.args.every(function (a) { return evaluar(a, valores) === 1; }) ? 1 : 0;
+      case "or": return n.args.some(function (a) { return evaluar(a, valores) === 1; }) ? 1 : 0;
+      case "xor": return n.args.reduce(function (s, a) { return s ^ evaluar(a, valores); }, 0);
+    }
+    throw new Error("Nodo desconocido: " + n.t);
+  }
+  function compararNombres(a, b) {
+    var ma = /^([A-Z])(\d*)$/.exec(a), mb = /^([A-Z])(\d*)$/.exec(b);
+    if (ma[1] !== mb[1]) return ma[1] < mb[1] ? -1 : 1;
+    return (+ma[2] || 0) - (+mb[2] || 0);
+  }
+  function variables(n) {
+    var s = {};
+    (function rec(x) {
+      if (x.t === "var") s[x.n] = 1;
+      else if (x.t === "not") rec(x.a);
+      else if (x.args) x.args.forEach(rec);
+    })(n);
+    return Object.keys(s).sort(compararNombres);
+  }
+
+  function escHTML(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function formatear(n, f, padre) {
+    var s;
+    switch (n.t) {
+      case "var": s = f.var(n.n); break;
+      case "const": s = String(n.v); break;
+      case "not": return f.neg(formatear(n.a, f, null));     // la barra agrupa: nunca paréntesis
+      case "and": s = n.args.map(function (a) { return formatear(a, f, "and"); }).join(f.and); break;
+      case "or": s = n.args.map(function (a) { return formatear(a, f, "or"); }).join(f.or); break;
+      case "xor": s = n.args.map(function (a) { return formatear(a, f, "xor"); }).join(f.xor); break;
+    }
+    return padre && PREC[n.t] < PREC[padre] ? f.par(s) : s;
+  }
+  var F_HTML = { var: escHTML, and: " · ", or: " + ", xor: " ⊕ ",
+    neg: function (s) { return '<span class="neg">' + s + "</span>"; },
+    par: function (s) { return "(" + s + ")"; } };
+  var F_LATEX = { var: function (v) { var m = /^([A-Z])(\d+)$/.exec(v); return m ? m[1] + "_{" + m[2] + "}" : v; },
+    and: " \\cdot ", or: " + ", xor: " \\oplus ",
+    neg: function (s) { return "\\overline{" + s + "}"; },
+    par: function (s) { return "\\left(" + s + "\\right)"; } };
+  var F_ENTRADA = { var: function (v) { return v; }, and: "·", or: " + ", xor: " ⊕ ",
+    neg: function (s) { return "¬(" + s + ")"; },
+    par: function (s) { return "(" + s + ")"; } };
+  var F_LECTURA = { var: function (v) { return v; }, and: " y ", or: " o ", xor: " o exclusiva ",
+    neg: function (s) { return "no (" + s + ")"; },
+    par: function (s) { return "(" + s + ")"; } };
+
+  /* aHTML: para pantalla; la negación es <span class="neg"> (CSS: text-decoration: overline)
+   * y el lector de pantalla debe recibir aLectura en un aria-label. */
+  function aHTML(n) { return formatear(n, F_HTML, null); }
+  function aLatex(n) { return formatear(n, F_LATEX, null); }
+  function aEntrada(n) { return formatear(n, F_ENTRADA, null); }   // reescribible y re-analizable
+  function aLectura(n) { return formatear(n, F_LECTURA, null); }   // texto para lector de pantalla
+
+  function tablaExpresion(n, vars) {
+    vars = vars || variables(n);
+    return tablaVerdad(vars, function (v) { return evaluar(n, v); });
+  }
+
+  // ------------------------------------------------------------------ equivalencia
+  /* f y g: funciones (valores → bit) o árboles de expresión. Recorre las 2^n combinaciones. */
+  function comoFuncion(x) { return typeof x === "function" ? x : function (v) { return evaluar(x, v); }; }
+  function compararFunciones(vars, f, g) {
+    f = comoFuncion(f); g = comoFuncion(g);
+    var filas = combinaciones(vars.length).map(function (fila) {
+      var v = asignacion(vars, fila), a = bit(f(v)), b = bit(g(v));
+      return { entradas: fila, f: a, g: b, igual: a === b };
+    });
+    var distintas = filas.filter(function (r) { return !r.igual; });
+    return { equivalentes: distintas.length === 0, filas: filas, contraejemplos: distintas,
+             combinaciones: filas.length };
+  }
+
+  // ------------------------------------------------------------------ circuitos
+  /* Circuito: { entradas: ["A","B"], puertas: [{id:"P1", tipo:"AND", de:["A","B"]}, …],
+   *             salidas: {S: "P1"} }
+   * Valida referencias, aridad y ciclos. Devuelve el orden de cálculo. */
+  function validarCircuito(c) {
+    var ids = {};
+    c.entradas.forEach(function (e) {
+      if (!/^[A-Z]\d*$/.test(e)) throw new Error("Nombre de entrada no válido: " + e);
+      if (ids[e]) throw new Error("Nombre repetido: " + e);
+      ids[e] = "entrada";
+    });
+    c.puertas.forEach(function (g) {
+      if (ids[g.id]) throw new Error("Nombre repetido: " + g.id);
+      ids[g.id] = g;
+      comprobarAridad(g.tipo, g.de.length);
+    });
+    c.puertas.forEach(function (g) {
+      g.de.forEach(function (r) { if (!ids[r]) throw new Error(g.id + " usa una señal que no existe: " + r); });
+    });
+    Object.keys(c.salidas).forEach(function (s) {
+      if (!ids[c.salidas[s]]) throw new Error("La salida " + s + " no está conectada a nada que exista");
+    });
+    // orden topológico (los circuitos combinacionales no tienen realimentación)
+    var orden = [], estado = {};
+    function visitar(id) {
+      if (ids[id] === "entrada" || estado[id] === 2) return;
+      if (estado[id] === 1) throw new Error("El circuito tiene un lazo (realimentación) en " + id);
+      estado[id] = 1;
+      ids[id].de.forEach(visitar);
+      estado[id] = 2; orden.push(id);
+    }
+    c.puertas.forEach(function (g) { visitar(g.id); });
+    return orden;
+  }
+  /* Devuelve el valor de TODAS las señales (entradas, salidas de cada puerta) y de las salidas. */
+  function evaluarCircuito(c, valores) {
+    var orden = validarCircuito(c), senal = {}, porId = {};
+    c.puertas.forEach(function (g) { porId[g.id] = g; });
+    c.entradas.forEach(function (e) {
+      if (!(e in valores)) throw new Error("Falta el valor de la entrada " + e);
+      senal[e] = bit(valores[e]);
+    });
+    orden.forEach(function (id) {
+      var g = porId[id];
+      senal[id] = evaluarPuerta(g.tipo, g.de.map(function (r) { return senal[r]; }));
+    });
+    var sal = {};
+    Object.keys(c.salidas).forEach(function (s) { sal[s] = senal[c.salidas[s]]; });
+    return { senales: senal, salidas: sal, orden: orden };
+  }
+  function tablaCircuito(c, salida) {
+    salida = salida || Object.keys(c.salidas)[0];
+    return tablaVerdad(c.entradas, function (v) { return evaluarCircuito(c, v).salidas[salida]; });
+  }
+  /* Árbol de expresión equivalente a una salida (para mostrar «el circuito escrito»). */
+  function circuitoAExpresion(c, salida) {
+    validarCircuito(c);
+    salida = salida || Object.keys(c.salidas)[0];
+    var porId = {};
+    c.puertas.forEach(function (g) { porId[g.id] = g; });
+    function rec(id) {
+      var g = porId[id];
+      if (!g) return { t: "var", n: id };
+      var a = g.de.map(rec);
+      switch (g.tipo) {
+        case "NOT": return { t: "not", a: a[0] };
+        case "AND": return { t: "and", args: a };
+        case "OR": return { t: "or", args: a };
+        case "XOR": return { t: "xor", args: a };
+        case "NAND": return { t: "not", a: { t: "and", args: a } };
+        case "NOR": return { t: "not", a: { t: "or", args: a } };
+        case "XNOR": return { t: "not", a: { t: "xor", args: a } };
+      }
+    }
+    return rec(c.salidas[salida]);
+  }
+
+  // ------------------------------------------------------------------ circuitos en construcción
+  /* Diagnóstico de un circuito que se está montando (admite entradas de puerta a null).
+   * Devuelve {completo, problemas:[texto], avisos:[texto]} en lenguaje llano. */
+  function diagnosticar(c) {
+    var problemas = [], avisos = [], ids = {};
+    c.entradas.forEach(function (e) { ids[e] = "entrada"; });
+    c.puertas.forEach(function (g) { ids[g.id] = g; });
+    c.puertas.forEach(function (g) {
+      g.de.forEach(function (r, i) {
+        if (r === null || r === undefined || r === "") problemas.push("La entrada " + (i + 1) + " de la puerta " + g.id + " (" + g.tipo + ") no está conectada.");
+        else if (!ids[r]) problemas.push("La puerta " + g.id + " usa una señal que ya no existe.");
+      });
+    });
+    var salidas = Object.keys(c.salidas);
+    if (!salidas.length) problemas.push("No hay ninguna salida.");
+    salidas.forEach(function (s) {
+      var r = c.salidas[s];
+      if (r === null || r === undefined || r === "") problemas.push("La salida " + s + " no está conectada.");
+      else if (!ids[r]) problemas.push("La salida " + s + " está conectada a una señal que ya no existe.");
+    });
+    if (!problemas.length) {
+      try { validarCircuito(c); } catch (e) { problemas.push(e.message.indexOf("lazo") >= 0 ? "Hay un lazo: una puerta acaba recibiendo su propia salida. En estos circuitos las señales solo van hacia delante." : e.message); }
+    }
+    // puertas que no llegan a ninguna salida y entradas sin usar (avisos, no impiden simular)
+    var usadas = {};
+    (function marcar(lista) {
+      lista.forEach(function (r) {
+        if (!r || usadas[r]) return; usadas[r] = 1;
+        var g = ids[r]; if (g && g !== "entrada") marcar(g.de);
+      });
+    })(salidas.map(function (s) { return c.salidas[s]; }));
+    c.puertas.forEach(function (g) { if (!usadas[g.id]) avisos.push("La puerta " + g.id + " no llega a ninguna salida: sobra o falta conectarla."); });
+    c.entradas.forEach(function (e) { if (!usadas[e]) avisos.push("La entrada " + e + " no se usa en ninguna puerta."); });
+    return { completo: problemas.length === 0, problemas: problemas, avisos: avisos };
+  }
+
+  /* Colocación automática por niveles: entradas a la izquierda, cada puerta una columna a la
+   * derecha de la más lejana de sus fuentes, salidas al final. Dentro de cada columna se ordena
+   * por la altura media de las fuentes (menos cruces). Admite entradas de puerta a null. */
+  function disponer(c, opciones) {
+    opciones = opciones || {};
+    var colX = opciones.columna || 170, filaY = opciones.fila || 90, x0 = opciones.x0 || 60, y0 = opciones.y0 || 50;
+    var margen = opciones.margen !== undefined ? opciones.margen : 24;
+    var altoDe = opciones.alto || function (g) { return Math.max(filaY - margen, (g.de.length + 1) * 26); };
+    var porId = {}, nivel = {}, enCurso = {};
+    c.puertas.forEach(function (g) { porId[g.id] = g; });
+    c.entradas.forEach(function (e) { nivel[e] = 0; });
+    function niv(id) {
+      if (nivel[id] !== undefined) return nivel[id];
+      var g = porId[id]; if (!g) return 0;
+      if (enCurso[id]) return 1;                 // lazo: no colgarse; el diagnóstico ya lo avisa
+      enCurso[id] = 1;
+      var m = 0; g.de.forEach(function (r) { if (r) m = Math.max(m, niv(r)); });
+      enCurso[id] = 0;
+      return (nivel[id] = m + 1);
+    }
+    c.puertas.forEach(function (g) { niv(g.id); });
+    var maxN = 0; Object.keys(nivel).forEach(function (k) { maxN = Math.max(maxN, nivel[k]); });
+    var pos = {};
+    c.entradas.forEach(function (e, i) { pos[e] = { x: x0, y: y0 + i * filaY, nivel: 0 }; });
+    for (var n = 1; n <= maxN; n++) {
+      var col = c.puertas.filter(function (g) { return nivel[g.id] === n; });
+      col.forEach(function (g) {
+        var ys = g.de.filter(function (r) { return r && pos[r]; }).map(function (r) { return pos[r].y; });
+        g.__y = ys.length ? ys.reduce(function (a, b) { return a + b; }, 0) / ys.length : 1e9;
+      });
+      col.sort(function (a, b) { return a.__y - b.__y || (a.id < b.id ? -1 : 1); });
+      // separación según la ALTURA real de cada puerta (opciones.alto), no un paso fijo: sin solapes
+      var fondo = -1e9;
+      col.forEach(function (g) {
+        var h = altoDe(g), deseado = g.__y === 1e9 ? fondo + margen + h / 2 : g.__y;
+        var y = Math.max(deseado, fondo + margen + h / 2, y0);
+        pos[g.id] = { x: x0 + n * colX, y: y, nivel: n, alto: h }; fondo = y + h / 2; delete g.__y;
+      });
+    }
+    // salidas: a la altura de su fuente, pero nunca unas encima de otras (varias pueden salir de la misma puerta)
+    var salidas = Object.keys(c.salidas), sepS = opciones.filaSalida || Math.min(filaY, 70), ultimaS = -1e9;
+    salidas.map(function (s, i) { var r = c.salidas[s]; return { s: s, i: i, y: r && pos[r] ? pos[r].y : y0 + i * sepS }; })
+      .sort(function (a, b) { return a.y - b.y || a.i - b.i; })
+      .forEach(function (o) {
+        var y = Math.max(o.y, ultimaS + sepS, y0); ultimaS = y;
+        pos["salida:" + o.s] = { x: x0 + (maxN + 1) * colX, y: y, nivel: maxN + 1 };
+      });
+    var maxY = 0; Object.keys(pos).forEach(function (k) { maxY = Math.max(maxY, pos[k].y + (pos[k].alto || 0) / 2); });
+    return { pos: pos, niveles: maxN, ancho: x0 + (maxN + 1) * colX + 80, alto: maxY + filaY };
+  }
+
+  /* Guardar/abrir un montaje como texto (enlace o archivo). Formato versionado y validado. */
+  var TIPOS_VALIDOS = ORDEN_PUERTAS;
+  function codificarMontaje(m) {
+    var json = JSON.stringify({ v: 1, entradas: m.entradas, significados: m.significados || {}, puertas: m.puertas.map(function (g) { return { id: g.id, tipo: g.tipo, de: g.de }; }), salidas: m.salidas });
+    var b64 = (typeof btoa === "function") ? btoa(unescape(encodeURIComponent(json))) : Buffer.from(json, "utf8").toString("base64");
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function decodificarMontaje(texto) {
+    var b64 = String(texto).trim().replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    var json;
+    try { json = (typeof atob === "function") ? decodeURIComponent(escape(atob(b64))) : Buffer.from(b64, "base64").toString("utf8"); }
+    catch (e) { throw new Error("El enlace o el archivo no contiene un montaje válido."); }
+    var m; try { m = JSON.parse(json); } catch (e) { throw new Error("El enlace o el archivo no contiene un montaje válido."); }
+    if (!m || m.v !== 1 || !Array.isArray(m.entradas) || !Array.isArray(m.puertas) || typeof m.salidas !== "object")
+      throw new Error("El montaje está incompleto o es de otra versión.");
+    m.entradas.forEach(function (e) { if (!/^[A-Z]\d*$/.test(e)) throw new Error("Nombre de entrada no válido: " + e); });
+    m.puertas.forEach(function (g) {
+      if (!/^[A-Za-z]\w*$/.test(g.id) || TIPOS_VALIDOS.indexOf(g.tipo) < 0 || !Array.isArray(g.de)) throw new Error("Hay una puerta no válida en el montaje.");
+      comprobarAridad(g.tipo, g.de.length);
+    });
+    return { entradas: m.entradas, significados: m.significados || {}, puertas: m.puertas, salidas: m.salidas };
+  }
+
+  // ------------------------------------------------------------------ numeración
+  function aBinario(n, bits) {
+    if (!Number.isInteger(n) || n < 0) throw new Error("Solo números naturales: " + n);
+    var s = n.toString(2);
+    if (bits) { if (s.length > bits) throw new Error(n + " no cabe en " + bits + " bits"); s = ("0".repeat(bits) + s).slice(-bits); }
+    return s;
+  }
+  function deBinario(s) {
+    s = String(s).replace(/\s/g, "");
+    if (!/^[01]+$/.test(s)) throw new Error("Un número binario solo lleva ceros y unos: " + s);
+    return parseInt(s, 2);
+  }
+  /* Valor posicional: «1011» → [{bit:1, peso:8}, {bit:0, peso:4}, …] y su suma. */
+  function pasosBinarioADecimal(s) {
+    s = String(s).replace(/\s/g, ""); deBinario(s);
+    var n = s.length;
+    var pasos = s.split("").map(function (b, i) { return { bit: +b, peso: Math.pow(2, n - 1 - i), exponente: n - 1 - i }; });
+    return { pasos: pasos, total: pasos.reduce(function (t, p) { return t + p.bit * p.peso; }, 0) };
+  }
+  /* Divisiones sucesivas entre 2: [{dividendo, cociente, resto}…]; el binario se lee de abajo arriba. */
+  function pasosDecimalABinario(n) {
+    if (!Number.isInteger(n) || n < 0) throw new Error("Solo números naturales: " + n);
+    var pasos = [];
+    if (n === 0) return { pasos: [{ dividendo: 0, cociente: 0, resto: 0 }], binario: "0" };
+    while (n > 0) { pasos.push({ dividendo: n, cociente: Math.floor(n / 2), resto: n % 2 }); n = Math.floor(n / 2); }
+    return { pasos: pasos, binario: pasos.map(function (p) { return p.resto; }).reverse().join("") };
+  }
+  /* Ampliación (4º TEC): hexadecimal. */
+  function aHex(n) { if (!Number.isInteger(n) || n < 0) throw new Error("Solo números naturales: " + n); return n.toString(16).toUpperCase(); }
+  function deHex(s) { s = String(s).trim().toUpperCase(); if (!/^[0-9A-F]+$/.test(s)) throw new Error("Cifra hexadecimal no válida: " + s); return parseInt(s, 16); }
+  function binarioAHexPorGrupos(s) {
+    s = String(s).replace(/\s/g, ""); deBinario(s);
+    while (s.length % 4) s = "0" + s;
+    var g = s.match(/.{4}/g);
+    return { grupos: g, cifras: g.map(function (x) { return aHex(parseInt(x, 2)); }) };
+  }
+
+  return {
+    VERSION: "1.2.0",
+    PUERTAS: PUERTAS, ORDEN_PUERTAS: ORDEN_PUERTAS,
+    bit: bit, evaluarPuerta: evaluarPuerta, explicarPuerta: explicarPuerta,
+    combinaciones: combinaciones, tablaVerdad: tablaVerdad, comprobarTabla: comprobarTabla,
+    analizar: analizar, evaluar: evaluar, variables: variables, tablaExpresion: tablaExpresion,
+    aHTML: aHTML, aLatex: aLatex, aEntrada: aEntrada, aLectura: aLectura,
+    compararFunciones: compararFunciones,
+    validarCircuito: validarCircuito, evaluarCircuito: evaluarCircuito,
+    tablaCircuito: tablaCircuito, circuitoAExpresion: circuitoAExpresion,
+    diagnosticar: diagnosticar, disponer: disponer,
+    codificarMontaje: codificarMontaje, decodificarMontaje: decodificarMontaje,
+    aBinario: aBinario, deBinario: deBinario, pasosBinarioADecimal: pasosBinarioADecimal,
+    pasosDecimalABinario: pasosDecimalABinario, aHex: aHex, deHex: deHex,
+    binarioAHexPorGrupos: binarioAHexPorGrupos,
+    _lista: lista
+  };
+});
+
+</script>
+<script>
+(function () {
+  "use strict";
+  var L = window.LogicaDigital;
+  var TODAS = ["NOT", "AND", "OR", "NAND", "NOR", "XOR"];
+
+  // ---------- configuración: name del iframe > #hash > ?query
+  function leerConfig() {
+    var fuentes = [window.name || "", (location.hash || "").slice(1), (location.search || "").slice(1)];
+    var cfg = {};
+    for (var f = fuentes.length - 1; f >= 0; f--) {
+      fuentes[f].split(/[;&]/).forEach(function (par) {
+        var kv = par.split("="); if (kv.length === 2) cfg[decodeURIComponent(kv[0]).trim()] = decodeURIComponent(kv[1]).trim();
+      });
+    }
+    var lista = (cfg.puertas ? cfg.puertas.toUpperCase().split(",") : TODAS)
+      .map(function (x) { return x.trim(); }).filter(function (x) { return TODAS.indexOf(x) >= 0; });
+    if (!lista.length) lista = TODAS.slice();
+    return { puertas: lista, modo: cfg.modo === "predecir" ? "predecir" : "explorar" };
+  }
+  var CFG = leerConfig();
+
+  var estado = { puerta: CFG.puertas.indexOf("AND") >= 0 ? "AND" : CFG.puertas[0], entradas: [0, 0],
+                 modo: CFG.modo, resueltas: {}, fallos: 0, revelada: false };
+  var $ = function (id) { return document.getElementById(id); };
+  var panel = $("panel");
+
+  function nEntradas() { return estado.puerta === "NOT" ? 1 : 2; }
+  function nombres() { return nEntradas() === 1 ? ["A"] : ["A", "B"]; }
+  function vals() { return estado.entradas.slice(0, nEntradas()); }
+  function salida() { return L.evaluarPuerta(estado.puerta, vals()); }
+  function fila() { return parseInt(vals().join(""), 2); }
+  function visible() { return estado.modo === "explorar" || estado.revelada || estado.resueltas[fila()] !== undefined; }
+
+  var EXPR = { NOT: "¬A", AND: "A·B", OR: "A + B", NAND: "¬(A·B)", NOR: "¬(A + B)", XOR: "A ⊕ B" };
+  var COTI = { NOT: "NO", AND: "Y", OR: "O", NAND: "NO-Y", NOR: "NO-O", XOR: "O exclusiva" };
+
+  // ---------- símbolo (formas distintivas, como en la hoja de referencia)
+  function simbolo(g, e, s, mostrarS) {
+    var c1 = "#b34700", c0 = "#5f6b77";
+    function cable(x1, y1, x2, y2, v) {
+      return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + (v === 1 ? c1 : c0) +
+        '" stroke-width="' + (v === 1 ? 6 : 4) + '"' + (v === 1 ? "" : ' stroke-dasharray="8 6"') + ' stroke-linecap="round"/>';
+    }
+    function rot(x, y, t, extra) { return '<text x="' + x + '" y="' + y + '" font-size="20" font-weight="700" fill="#1d2733" font-family="Verdana, \'DejaVu Sans\', Arial, sans-serif"' + (extra || "") + ">" + t + "</text>"; }
+    function interruptor(n, y, v) {
+      return '<g class="tog" id="in-' + n + '" data-entrada="' + n + '" role="button" tabindex="0" aria-pressed="' + (v ? "true" : "false") +
+        '" aria-keyshortcuts="' + n + '" aria-label="Entrada ' + n + ': vale ' + v + '. Pulsa para cambiarla.">' +
+        rot(2, y + 7, n) +
+        '<rect class="tog-caja" x="22" y="' + (y - 21) + '" width="44" height="42" rx="8" fill="' + (v ? "#fff1e6" : "#ffffff") +
+        '" stroke="' + (v ? c1 : c0) + '" stroke-width="3"/>' + rot(44, y + 8, String(v), ' text-anchor="middle" font-size="24"') + "</g>";
+    }
+    var cuerpo = 'fill="#ffffff" stroke="#22425c" stroke-width="4"';
+    var y = e.length === 1 ? [70] : [40, 100];
+    var xIn = 92, body = "", salidaX = 172;
+    if (g === "NOT") {
+      body = '<polygon points="92,35 92,105 158,70" ' + cuerpo + "/>"; salidaX = 158;
+    } else if (g === "AND" || g === "NAND") {
+      body = '<path d="M92,25 H128 A45,45 0 0 1 128,115 H92 Z" ' + cuerpo + "/>"; salidaX = 173;
+    } else {
+      body = '<path d="M90,25 Q150,25 178,70 Q150,115 90,115 Q112,70 90,25 Z" ' + cuerpo + "/>"; salidaX = 178;
+      xIn = 104;
+      if (g === "XOR") body = '<path d="M78,25 Q100,70 78,115" fill="none" stroke="#22425c" stroke-width="4"/>' + body;
+    }
+    var burbuja = (g === "NOT" || g === "NAND" || g === "NOR");
+    if (burbuja) { body += '<circle cx="' + (salidaX + 8) + '" cy="70" r="7" ' + cuerpo + "/>"; salidaX += 15; }
+    var svg = "";
+    for (var i = 0; i < e.length; i++) {
+      var xFin = (g === "OR" || g === "NOR") ? 100 : (g === "XOR" ? 84 : xIn);
+      svg += cable(66, y[i], xFin, y[i], e[i]) + interruptor(["A", "B"][i], y[i], e[i]);
+    }
+    svg += body + cable(salidaX, 70, 236, 70, mostrarS ? s : 0) + rot(244, 77, "S") + rot(204, 60, mostrarS ? String(s) : "?");
+    return '<svg viewBox="0 0 270 140">' + svg + "</svg>";
+  }
+
+  // ---------- construcción de controles
+  function botonesPuertas() {
+    var cont = $("puertas"); cont.innerHTML = "";
+    CFG.puertas.forEach(function (g) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "puerta"; b.textContent = g; b.setAttribute("data-puerta", g);
+      b.setAttribute("aria-pressed", g === estado.puerta ? "true" : "false");
+      b.addEventListener("click", function () { cambiarPuerta(g); });
+      cont.appendChild(b);
+    });
+  }
+  // Entradas: interruptores dentro del símbolo (delegación: el SVG se repinta en cada cambio)
+  function alternar(n) {
+    var i = ["A", "B"].indexOf(n); if (i < 0 || i >= nEntradas()) return;
+    estado.entradas[i] = 1 - estado.entradas[i]; nuevaCombinacion();
+  }
+  $("simbolo").addEventListener("click", function (ev) {
+    var g = ev.target.closest ? ev.target.closest("[data-entrada]") : null;
+    if (g) { alternar(g.getAttribute("data-entrada")); var f = $("in-" + g.getAttribute("data-entrada")); if (f) f.focus(); }
+  });
+  $("simbolo").addEventListener("keydown", function (ev) {
+    var g = ev.target.closest ? ev.target.closest("[data-entrada]") : null;
+    if (g && (ev.key === "Enter" || ev.key === " ")) {
+      ev.preventDefault(); ev.stopPropagation(); var n = g.getAttribute("data-entrada"); alternar(n); var f = $("in-" + n); if (f) f.focus();
+    }
+  });
+
+  // ---------- acciones
+  function limpiar() { estado.resueltas = {}; estado.fallos = 0; estado.revelada = false; aviso("", ""); }
+  function cambiarPuerta(g) {
+    estado.puerta = g; estado.entradas = [0, 0]; limpiar();
+    botonesPuertas(); pintar();
+    aviso("", estado.modo === "predecir" ? "Puerta " + g + ". Mira las entradas y predice cuánto vale S." : L.explicarPuerta(g, vals(), nombres()) + " Cambia las entradas y observa la salida.");
+  }
+  function nuevaCombinacion() {
+    estado.fallos = 0; estado.revelada = false; pintar();
+    if (estado.modo === "explorar") aviso("", L.explicarPuerta(estado.puerta, vals(), nombres()));
+    else if (estado.resueltas[fila()] !== undefined) aviso("", "Esta fila ya la has comprobado: " + L.explicarPuerta(estado.puerta, vals(), nombres()));
+    else aviso("", "¿Cuánto vale S con " + nombres().map(function (n, i) { return n + " = " + vals()[i]; }).join(" y ") + "?");
+  }
+  function predecir(p) {
+    if (estado.modo !== "predecir" || visible()) return;
+    var s = salida(), exp = L.explicarPuerta(estado.puerta, vals(), nombres());
+    if (p === s) { estado.resueltas[fila()] = true; aviso("ok", "Correcto. " + exp); }
+    else if (estado.fallos === 0) { estado.fallos = 1; aviso("mal", "Todavía no. Pista: " + L.PUERTAS[estado.puerta].regla + " Vuelve a intentarlo."); }
+    else { estado.resueltas[fila()] = false; aviso("mal", "No era S = " + p + ". " + exp); }
+    pintar();
+    var total = 1 << nEntradas(), hechas = Object.keys(estado.resueltas).length;
+    if (hechas === total && estado.fallos !== 1) {
+      var bien = Object.keys(estado.resueltas).filter(function (k) { return estado.resueltas[k]; }).length;
+      $("aviso").textContent += " Tabla completa: " + bien + " de " + total + " filas acertadas" + (bien === total ? "." : ". Pulsa «Empezar de nuevo» para repetirla.");
+    }
+  }
+  function cambiarModo(m) {
+    estado.modo = m; limpiar();
+    $("m-explorar").setAttribute("aria-pressed", m === "explorar" ? "true" : "false");
+    $("m-predecir").setAttribute("aria-pressed", m === "predecir" ? "true" : "false");
+    pintar(); nuevaCombinacion();
+  }
+  function aviso(tipo, texto) { var a = $("aviso"); a.className = "aviso" + (tipo ? " " + tipo : ""); a.textContent = texto; }
+
+  // ---------- pintado (todo se recalcula desde el estado: nada queda de la puerta anterior)
+  function pintar() {
+    var g = estado.puerta, e = vals(), s = salida(), ver = visible();
+    panel.classList.toggle("predecir", estado.modo === "predecir");
+    $("nombre-puerta").textContent = g + " (" + COTI[g] + ")";
+    $("regla").textContent = L.PUERTAS[g].regla + (g === "NOT" ? " Tiene una sola entrada." : "");
+    $("simbolo").innerHTML = simbolo(g, e, s, ver);
+    var piloto = $("piloto");
+    piloto.className = "piloto" + (ver ? (s ? " on" : "") : " oculto");
+    piloto.textContent = ver ? String(s) : "?";
+    $("salida-texto").textContent = "S = " + (ver ? s : "?");
+    $("salida-estado").textContent = ver ? (s ? "(piloto encendido)" : "(piloto apagado)") : "(predice antes de ver)";
+    $("p0").disabled = $("p1").disabled = ver;
+    var ast = L.analizar(EXPR[g]);
+    $("expr").innerHTML = "S = " + L.aHTML(ast);
+    $("expr-lectura").textContent = "Expresión: S igual a " + L.aLectura(ast);
+    // tabla
+    var ns = nombres();
+    $("thead").innerHTML = "<tr>" + ns.map(function (n) { return '<th scope="col">' + n + "</th>"; }).join("") + '<th scope="col">S</th></tr>';
+    var actual = fila(), html = "";
+    L.combinaciones(ns.length).forEach(function (c, k) {
+      var mostrar = estado.modo === "explorar" || estado.resueltas[k] !== undefined || (k === actual && ver);
+      var sv = mostrar ? L.evaluarPuerta(g, c) : "?";
+      var etiqueta = "Probar " + ns.map(function (n, i) { return n + " = " + c[i]; }).join(", ");
+      html += '<tr data-tr="' + k + '"' + (k === actual ? ' class="actual" aria-current="true"' : "") + ">" +
+        c.map(function (v, i) { return '<td>' + (i === 0 ? '<button type="button" data-fila="' + k + '" aria-label="' + etiqueta + '">' + v + "</button>" : v) + "</td>"; }).join("") +
+        '<td class="col-s">' + sv + "</td></tr>";
+    });
+    $("tbody").innerHTML = html;
+    // Toda la fila responde al clic (repaso DOCA M3), no solo la celda del botón.
+    Array.prototype.forEach.call(document.querySelectorAll("#tbody tr[data-tr]"), function (tr) {
+      tr.addEventListener("click", function () {
+        var k = +tr.getAttribute("data-tr"), c = L.combinaciones(ns.length)[k];
+        estado.entradas = [c[0], c.length > 1 ? c[1] : 0]; nuevaCombinacion();
+        var f = document.querySelector('[data-fila="' + k + '"]'); if (f) f.focus();
+      });
+    });
+    var total = 1 << ns.length, hechas = Object.keys(estado.resueltas).length;
+    $("progreso").textContent = estado.modo === "predecir" ? "Filas comprobadas: " + hechas + " de " + total + "." : "Pulsa una fila para probar esa combinación.";
+  }
+
+  // ---------- eventos
+  $("m-explorar").addEventListener("click", function () { cambiarModo("explorar"); });
+  $("m-predecir").addEventListener("click", function () { cambiarModo("predecir"); });
+  $("p0").addEventListener("click", function () { predecir(0); });
+  $("p1").addEventListener("click", function () { predecir(1); });
+  $("reiniciar").addEventListener("click", function () { estado.entradas = [0, 0]; limpiar(); pintar(); nuevaCombinacion(); });
+
+  // ---------- arranque
+  $("m-explorar").setAttribute("aria-pressed", estado.modo === "explorar" ? "true" : "false");
+  $("m-predecir").setAttribute("aria-pressed", estado.modo === "predecir" ? "true" : "false");
+  botonesPuertas(); pintar(); nuevaCombinacion();
+  window.__panel = { estado: estado, cfg: CFG };   // solo para pruebas automáticas
+})();
+</script>
+</body>
+</html>
